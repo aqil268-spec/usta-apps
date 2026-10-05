@@ -1,9 +1,10 @@
 // Sadə service worker: ekran fayllarını keşləyir, API sorğularına toxunmur.
-const CACHE = 'aqqa-v6';
-const FILES = ['./', './index.html', './config.js', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'aqqa-v7';
+const FILES = ['./', './index.html', './app.js', './config.js', './manifest.json', './icon-192.png', './icon-512.png'];
+const EXTRA = ['./html2canvas.min.js', './jspdf.umd.min.js']; // olmasa da quraşdırma dayanmır
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES).then(() => Promise.all(EXTRA.map(f => c.add(f).catch(() => {}))))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
