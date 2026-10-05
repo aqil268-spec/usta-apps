@@ -59,7 +59,7 @@ function periods() {
 }
 
 // ------------------------------------------------------------- API + keş
-const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'createCarLink', 'approveCarLink', 'rejectCarLink', 'cancelCarLink', 'linkSubmit', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
+const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'createCarLink', 'createSupplierLink', 'revokeSupplierLink', 'approveCarLink', 'rejectCarLink', 'cancelCarLink', 'linkSubmit', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
   'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings'];
 let MEM = {}; try { MEM = JSON.parse(localStorage.getItem('swr') || '{}'); } catch (e) { MEM = {}; }
 
@@ -177,7 +177,7 @@ function syncCars(ver) {
 }
 
 // ------------------------------------------------------------- Naviqasiya
-const NO_RETURN = ['login', 'changePin', 'pinShow', 'publicCar'];
+const NO_RETURN = ['login', 'changePin', 'pinShow', 'publicCar', 'publicStock'];
 const ROOTS = ['home', 'cars', 'kassa', 'me', 'products', 'more'];
 function go(view, params = {}, push = true) {
   if (push && !NO_RETURN.includes(S.view)) { S.history.push({ view: S.view, params: S.params }); if (S.history.length > 40) S.history.shift(); history.pushState({ app: 1 }, ''); }
@@ -216,7 +216,8 @@ window.confirm = m => _confirm(tr(m));
 window.prompt = (m, d) => _prompt(tr(m), d);
 
 async function render() {
-  if (S.publicToken) S.view = 'publicCar';
+  if (S.publicStockToken) S.view = 'publicStock';
+  else if (S.publicToken) S.view = 'publicCar';
   else if (!S.token) S.view = 'login';
   const v = VIEWS[S.view] || VIEWS.home;
   try {
@@ -241,7 +242,7 @@ function nav() {
   const items = isAdmin()
     ? [['home', 'chart', 'Hesabat'], ['kassa', 'wallet', 'Kassa'], ['products', 'drop', 'Mallar'], ['more', 'more', 'Daha' + (pend ? `<span class="badge">${pend}</span>` : '')]]
     : [['home', 'home', 'Əsas'], ['cars', 'car', 'Maşınlar'], ...(S.user.kassa ? [['kassa', 'wallet', 'Kassa']] : []), ['me', 'user', 'Mən']];
-  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierPay: 'more', cheque: 'more',
+  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more',
     requests: 'more', ustaDebts: 'more', carLinks: isAdmin() ? 'more' : 'cars', linkNew: isAdmin() ? 'more' : 'cars', debtList: isAdmin() ? 'more' : 'me', payForm: isAdmin() ? 'more' : 'me', users: 'more', userForm: 'more', settings: 'more', kassaHistory: 'kassa',
     productForm: 'products', purchaseForm: 'products', purchaseList: 'products' };
   const cur = map[S.view] || S.view;
@@ -1039,6 +1040,7 @@ VIEWS.supplierDetail = async (p) => {
       <div class="stat"><span>${b.borc >= 0 ? 'Borcum' : 'Avans'}</span><b style="color:${b.borc > 0 ? 'var(--danger)' : 'var(--ok)'}">${money(Math.abs(b.borc))}</b></div>
     </div>
     <button class="btn primary big" data-act="paySupplierForm">Ödə</button>
+    <button class="btn" data-act="supplierLinks">${ic('link', 18)}Stok linki</button>
   </div>
   <h2>Mallar üzrə</h2>
   <div class="card scroll">${d.mallar.length ? `<table><tr><th>Mal</th><th class="r">Alınıb</th><th class="r">Satılıb</th><th class="r">Məbləğ</th><th class="r">Stok</th></tr>
@@ -1061,6 +1063,83 @@ VIEWS.supplierPay = (p) => `<h1>Təchizatçıya ödəniş</h1>
     <span class="muted">Nağd ödəniş kassadan azalır. Bank köçürməsi kassaya təsir etmir. Borcdan çox ödəniş avans kimi qalır.</span>
     <button class="btn primary big" type="submit">Ödə və çek yarat</button>
   </form>`;
+
+// ------------------------------------------------------------- Təchizatçı üçün stok linki
+const stockUrl = token => location.origin + location.pathname + '#stok=' + token;
+const msDT = ms => { if (!ms) return ''; const d = new Date(Number(ms)), z = x => String(x).padStart(2, '0'); return `${z(d.getDate())}.${z(d.getMonth() + 1)}.${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+const slLimit = l => l.limit_nov === 'saat' ? `${l.limit_deyer} saat · ${msDT(l.bitme)}-dək` : l.limit_nov === 'defe' ? `${l.limit_deyer} dəfə · ${l.qalan} qalıb` : 'Limitsiz';
+const slPill = st => ({ ok: '<span class="pill ok">Aktiv</span>', legv: '<span class="pill muted-pill">Ləğv edilib</span>', bitib: '<span class="pill muted-pill">Vaxtı bitib</span>', limit: '<span class="pill muted-pill">Limit dolub</span>' }[st] || '');
+const slText = url => `Salam! ${S.settings.servis_adi || 'Servis'}: sizin mallarınızın stok vəziyyəti bu linkdədir: ${url}`;
+
+VIEWS.supplierLinks = async (p) => {
+  const list = await cget('supplierLinks', { supplier_id: p.supplier_id });
+  S.params.links = list;
+  const nov = p.nov || 'yox';
+  const made = p.made && list.find(l => l.link_id === p.made);
+  return `<h1>Stok linki</h1>
+  <span class="muted">${esc(p.ad)} linki açır və yalnız öz gətirdiyi malların qalığını görür. Qiymət, borc və başqa məlumat görünmür. Giriş və şifrə lazım deyil.</span>
+  ${made && made.token ? `<div class="card" style="border-color:var(--accent)">
+    <b>Link hazırdır</b>
+    <div class="doc" style="word-break:break-all;font-size:13px;user-select:all" data-noi18n>${esc(stockUrl(made.token))}</div>
+    <div class="grid2"><button class="btn small primary" data-act="slSend" data-id="${esc(made.link_id)}">${ic('share', 18)}WhatsApp</button><button class="btn small" data-act="slCopy" data-id="${esc(made.link_id)}">Kopyala</button></div>
+  </div>` : ''}
+  <form class="card" data-form="supplierLink">
+    <b>Yeni link</b>
+    <span class="muted">Linkin istifadə limiti</span>
+    <div class="seg" role="group" aria-label="Limit"><button type="button" data-limnov="yox" class="${nov === 'yox' ? 'on' : ''}">Limitsiz</button><button type="button" data-limnov="saat" class="${nov === 'saat' ? 'on' : ''}">Saat</button><button type="button" data-limnov="defe" class="${nov === 'defe' ? 'on' : ''}">Açılış sayı</button></div>
+    <input type="hidden" name="limit_nov" value="${nov}">
+    <label class="field" data-limwrap style="${nov === 'yox' ? 'display:none' : ''}"><span data-limlabel>${nov === 'saat' ? 'Neçə saat işləsin?' : 'Neçə dəfə açılsın?'}</span><input name="limit_deyer" inputmode="numeric" placeholder="${nov === 'saat' ? 'məs. 24' : 'məs. 10'}"></label>
+    <label class="row" style="font-size:14px"><input type="checkbox" name="satis_goster" style="width:22px;min-height:22px">Son 30 günün satış miqdarını da göstər</label>
+    <button class="btn primary big" type="submit">${ic('link')}Link yarat</button>
+  </form>
+  <h2>Linklər</h2>
+  <div class="list">${list.length ? list.map(l => `
+    <div class="card" style="gap:8px;padding:12px">
+      <div class="between"><span>${slLimit(l)}</span>${slPill(l.state)}</div>
+      <span class="muted"><span>Yaradılıb:</span> ${fullDT(l.yaradilma)}</span>
+      <span class="muted"><span>Açılıb:</span> ${l.acilis_sayi} <span>dəfə</span>${l.son_acilis ? ` · <span>son dəfə</span> ${fullDT(l.son_acilis)}` : ''}</span>
+      ${l.satis_goster ? '<span class="muted">Satış miqdarı görünür</span>' : ''}
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        ${l.state === 'ok' && l.token ? `<button class="btn small" style="flex:1" data-act="slSend" data-id="${esc(l.link_id)}">Göndər</button><button class="btn small" style="flex:1" data-act="slCopy" data-id="${esc(l.link_id)}">Kopyala</button>` : ''}
+        <button class="btn small" style="flex:1" data-act="slLog" data-id="${esc(l.link_id)}">Jurnal</button>
+        ${l.state === 'ok' ? `<button class="btn small" style="flex:1" data-act="slRevoke" data-id="${esc(l.link_id)}">Ləğv et</button>` : ''}
+      </div>
+    </div>`).join('') : '<div class="empty">Hələ link yoxdur.</div>'}</div>`;
+};
+
+VIEWS.supplierLinkLog = async (p) => {
+  const g = await cget('supplierLinkLog', { link_id: p.link_id });
+  const res = { ok: '<span class="pill ok">Açıldı</span>', legv: '<span class="pill bad">Ləğv edilmiş</span>', bitib: '<span class="pill bad">Vaxtı bitmiş</span>', limit: '<span class="pill bad">Limit dolu</span>' };
+  return `<h1>Link jurnalı</h1>
+  <span class="muted">${esc(p.ad)} · <span>linkin hər açılışı burada yazılır</span></span>
+  <div class="card scroll">${g.length ? `<table><tr><th>Tarix, saat</th><th>Cihaz</th><th class="r">Nəticə</th></tr>
+    ${g.map(x => `<tr><td>${fmtDate(String(x.tarix).slice(0, 10))} ${esc(String(x.tarix).slice(11, 19))}</td><td data-noi18n>${esc(x.cihaz)}</td><td class="r">${res[x.netice] || esc(x.netice)}</td></tr>`).join('')}</table>` : '<div class="empty">Link hələ açılmayıb.</div>'}</div>`;
+};
+
+// Təchizatçının gördüyü səhifə: girişsiz, yalnız oxumaq üçün
+VIEWS.publicStock = async (p) => {
+  const r = p.r || (p.r = await api('stockView', { k: S.publicStockToken, ua: navigator.userAgent }));
+  const msg = { yox: 'Link düzgün deyil.', legv: 'Bu link ləğv edilib.', bitib: 'Linkin vaxtı bitib.', limit: 'Linkin açılış limiti dolub.' }[r.state];
+  if (msg) return `<div class="card" style="margin-top:24px;gap:12px;text-align:center;align-items:center">${logoMark(48)}<h1>${msg}</h1><span class="muted">Yeni link üçün servislə əlaqə saxlayın.</span></div>`;
+  S.settings = { servis_adi: r.servis, telefon: r.telefon };
+  const cnt = st => r.mallar.filter(m => m.veziyyet === st).length;
+  const pill = { bitib: '<span class="pill bad">Bitib</span>', az: '<span class="pill">Az qalıb</span>', var: '<span class="pill ok">Kifayətdir</span>' };
+  return `
+  <div style="display:flex;flex-direction:column;gap:6px">${logoFull(r.servis)}<span class="muted" style="text-align:center">${esc(r.telefon || '')}</span></div>
+  <h1>Stok vəziyyəti</h1>
+  <span class="muted"><span data-noi18n>${esc(r.techizatci || '')}</span> · ${fullDT(r.tarix)}</span>
+  <div class="grid3">
+    <div class="stat"><span>Bitib</span><b style="color:var(--danger)">${cnt('bitib')}</b></div>
+    <div class="stat"><span>Az qalıb</span><b style="color:var(--accent)">${cnt('az')}</b></div>
+    <div class="stat"><span>Kifayətdir</span><b style="color:var(--ok)">${cnt('var')}</b></div>
+  </div>
+  <div class="list">${r.mallar.length ? r.mallar.map(m => `
+    <div class="item" style="cursor:default"><span class="grow"><span data-noi18n>${esc(m.ad)}</span><span class="muted"><span>Qalıq:</span> ${grp(m.qaliq, 2)} ${esc(m.vahid || '')}${r.satis ? ` · <span>30 gündə satılıb:</span> ${grp(m.satilan30, 2)}` : ''}</span></span>${pill[m.veziyyet]}</div>`).join('') : '<div class="empty">Sizin mallarınız tapılmadı.</div>'}</div>
+  ${r.qalan !== null && r.qalan !== undefined ? `<span class="muted">Bu link daha ${r.qalan} dəfə açıla bilər.</span>` : ''}
+  ${r.bitme ? `<span class="muted">Link ${msDT(r.bitme)}-dək işləyir.</span>` : ''}
+  <button class="btn" data-act="stockRefresh">Yenilə</button>
+  ${r.telefon ? `<a class="btn primary" style="text-decoration:none" href="tel:${esc(String(r.telefon).replace(/[^\d+]/g, ''))}">Servisə zəng et</a>` : ''}`;
+};
 
 function chequeHtml(c) {
   const s = c.settings, o = c.odenis, b = c.balans;
@@ -1218,6 +1297,11 @@ $app.addEventListener('submit', e => {
         const r = await api('createCarLink', { telefon: d.telefon });
         S.params.link = { url: linkUrl(r.token), telefon: r.telefon }; return render();
       }
+      case 'supplierLink': {
+        const r = await api('createSupplierLink', { supplier_id: S.params.supplier_id, limit_nov: d.limit_nov, limit_deyer: d.limit_deyer, satis_goster: !!f.satis_goster.checked });
+        delete MEM[swrKey('supplierLinks', { supplier_id: S.params.supplier_id })];
+        S.params.made = r.link_id; S.params.nov = 'yox'; toast('Link yaradıldı', true); return render();
+      }
       case 'publicCar': {
         d.ferqli_nomre = !!f.ferqli_nomre.checked;
         const r = await api('linkSubmit', { k: S.publicToken, car: d });
@@ -1291,7 +1375,7 @@ function pickCarObj(car) {
 
 // ------------------------------------------------------------- Hadisələr: kliklər
 $app.addEventListener('click', e => {
-  const t = e.target.closest('[data-act],[data-tab],[data-fill],[data-preset],[data-movetype],[data-paynov],[data-payfill]');
+  const t = e.target.closest('[data-act],[data-tab],[data-fill],[data-preset],[data-movetype],[data-paynov],[data-payfill],[data-limnov]');
   if (!t) return;
   if (t.dataset.tab) return tab(t.dataset.tab);
   if (t.dataset.fill) {
@@ -1303,6 +1387,15 @@ $app.addEventListener('click', e => {
   }
   if (t.dataset.payfill) { const f = t.form || t.closest('form'); f.nagd.value = t.dataset.payfill === 'nagd' ? S.params.borc : ''; f.kart.value = t.dataset.payfill === 'kart' ? S.params.borc : ''; return; }
   if (t.dataset.preset) return go(t.dataset.view === 'home' && isAdmin() ? 'report' : t.dataset.view, { preset: t.dataset.preset }, false);
+  if (t.dataset.limnov) {
+    t.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === t));
+    const f = t.closest('form'), v = t.dataset.limnov; f.limit_nov.value = v; S.params.nov = v;
+    f.querySelector('[data-limwrap]').style.display = v === 'yox' ? 'none' : '';
+    f.querySelector('[data-limlabel]').textContent = tr(v === 'saat' ? 'Neçə saat işləsin?' : 'Neçə dəfə açılsın?');
+    f.limit_deyer.placeholder = tr(v === 'saat' ? 'məs. 24' : 'məs. 10'); f.limit_deyer.required = v !== 'yox';
+    if (v !== 'yox') f.limit_deyer.focus();
+    return;
+  }
   if (t.dataset.movetype || t.dataset.paynov) {
     t.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === t));
     const f = t.closest('form'); f.nov.value = t.dataset.movetype || t.dataset.paynov;
@@ -1323,6 +1416,26 @@ $app.addEventListener('click', e => {
       case 'jobForCar': S.draft = null; jobDraft().car = S.params.car; return go('job');
       case 'changeCar': return go('cars', { pick: true });
       case 'openCar': return go('carHistory', { car_id: id });
+      case 'supplierLinks': { const s = S.params.detail.supplier; return go('supplierLinks', { supplier_id: s.supplier_id, ad: s.ad, telefon: s.telefon }); }
+      case 'slSend': {
+        const l = (S.params.links || []).find(x => x.link_id === id); if (!l || !l.token) return;
+        window.open(`https://wa.me/${waPhone(S.params.telefon)}?text=${encodeURIComponent(slText(stockUrl(l.token)))}`, '_blank'); return;
+      }
+      case 'slCopy': {
+        const l = (S.params.links || []).find(x => x.link_id === id); if (!l) return;
+        try { await navigator.clipboard.writeText(stockUrl(l.token)); toast('Link kopyalandı', true); }
+        catch (e) { toast('Kopyalamaq alınmadı. Linkə basıb saxlayın və kopyalayın.'); }
+        return;
+      }
+      case 'slLog': return go('supplierLinkLog', { link_id: id, ad: S.params.ad });
+      case 'slRevoke': {
+        if (!confirm('Link ləğv edilsin? Təchizatçı onu aça bilməyəcək.')) return;
+        const list = await api('revokeSupplierLink', { link_id: id });
+        MEM[swrKey('supplierLinks', { supplier_id: S.params.supplier_id })] = list; persist();
+        if (S.params.made === id) S.params.made = null;
+        toast('Link ləğv edildi', true); return render();
+      }
+      case 'stockRefresh': S.params.r = null; return render();
       case 'shareLink': {
         const l = S.params.link, text = linkText(l.url);
         if (navigator.share && !l.telefon) { try { await navigator.share({ text }); } catch (e) { /* bağlandı */ } return; }
@@ -1532,6 +1645,9 @@ document.addEventListener('visibilitychange', ping);
   // Müştəri üçün bir dəfəlik link: #kart=AÇAR (açar URL-in # hissəsindədir, serverə və loglara getmir)
   const pk = location.hash.match(/^#kart=([A-Za-z0-9_-]{40,60})$/);
   if (pk) { S.publicToken = pk[1]; S.view = 'publicCar'; S.params = {}; return render(); }
+  // Təchizatçı üçün stok linki: #stok=AÇAR (girişsiz, yalnız oxumaq)
+  const sk = location.hash.match(/^#stok=([A-Za-z0-9_-]{40,60})$/);
+  if (sk) { S.publicStockToken = sk[1]; S.view = 'publicStock'; S.params = {}; return render(); }
   if (!S.token) { S.view = 'login'; return render(); }
   try { await loadBoot(); S.view = 'home'; render(); warm(); }
   catch (e) { render(); }
