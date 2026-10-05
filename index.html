@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121417">
+<title>AQQA Servis</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap">
+<script src="config.js"></script>
+<style>
+:root{--bg:#121417;--surface:#1C1F24;--surface2:#23262C;--line:#2C3038;--text:#F2F1EE;--muted:#A3A7AE;--accent:#F2994A;--accent-soft:#2A2219;--danger:#F87171;--ok:#4ADE80}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Space Grotesk',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body{min-height:100vh}
+button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
+a{color:var(--accent)}
+#app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+main{flex:1;padding:24px 16px 104px;display:flex;flex-direction:column;gap:16px}
+h1{font-size:24px;margin:0}
+h2{font-size:16px;margin:0}
+.muted{color:var(--muted);font-size:13px}
+.row{display:flex;align-items:center;gap:12px}
+.between{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{background:var(--surface2);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px}
+.stat span:first-child{font-size:11px;color:var(--muted)}
+.stat b{font-size:16px}
+.big{font-size:34px;font-weight:700}
+.btn{min-height:48px;border-radius:14px;border:1px solid var(--line);background:var(--surface);padding:0 16px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--accent);color:#121417;border:none;font-weight:700}
+.btn.big{min-height:60px;font-size:17px;width:100%}
+.btn.small{min-height:36px;padding:0 12px;font-size:14px;border-radius:10px}
+.btn.danger{color:var(--danger)}
+.btn.ghost{background:none}
+.btn:disabled{opacity:.5}
+.icon-btn{width:44px;height:44px;border-radius:22px;border:1px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer}
+label.field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+input,select,textarea{background:var(--surface2);border:1px solid var(--line);border-radius:12px;min-height:48px;padding:0 14px;width:100%;outline:none}
+textarea{padding:12px 14px;min-height:72px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 14px;color:var(--muted)}
+.search input{border:none;background:none;padding:0}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--surface);border:none;width:100%;text-align:left;cursor:pointer}
+.item .grow{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.item .grow span:first-child{font-weight:500;font-size:14px}
+.item .grow>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plate{padding:6px 8px;border-radius:8px;border:1px solid #3A3F48;font-size:12px;font-weight:700;white-space:nowrap}
+.pill{font-size:12px;padding:6px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.pill.ok{background:#16261C;color:var(--ok)}
+.pill.bad{background:#2A1A1A;color:var(--danger)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;background:var(--surface2);padding:4px;border-radius:12px}
+.seg button{min-height:40px;border:none;background:none;border-radius:9px;cursor:pointer;font-size:14px}
+.seg button.on{background:var(--accent);color:#121417;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{color:var(--muted);font-weight:400;text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
+td{padding:8px 4px;border-bottom:1px solid var(--line)}
+td.r,th.r{text-align:right}
+.scroll{overflow-x:auto}
+nav.bottom{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(12px + env(safe-area-inset-bottom))}
+nav.bottom .in{max-width:520px;margin:0 auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
+nav.bottom button{height:56px;border:none;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;cursor:pointer}
+nav.bottom button.on{color:var(--accent)}
+.toast{position:fixed;left:16px;right:16px;bottom:96px;max-width:488px;margin:0 auto;background:#3A1E1E;color:#FFD9D9;border-radius:12px;padding:12px 14px;font-size:14px;z-index:20}
+.toast.ok{background:#173322;color:#C9F7D7}
+.loading{position:fixed;inset:0;background:rgba(18,20,23,.6);display:flex;align-items:center;justify-content:center;z-index:30}
+.spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.receipt{background:#FAF9F5;color:#141413;border-radius:16px;padding:20px;font-size:14px;display:flex;flex-direction:column;gap:10px}
+.receipt .line{display:flex;justify-content:space-between;gap:12px}
+.receipt hr{border:none;border-top:1px dashed #B8B4A8;margin:4px 0;width:100%}
+.receipt .muted{color:#5E5A50}
+.empty{padding:24px;text-align:center;color:var(--muted);font-size:14px}
+.back{display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--muted);padding:0;cursor:pointer;font-size:14px;min-height:36px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+// ------------------------------------------------------------- Əsas
+const API = window.APP_CONFIG && window.APP_CONFIG.API_URL;
+const S = { token: localStorage.getItem('token') || '', user: null, settings: {}, products: [], view: 'home', params: {}, history: [] };
+const $app = document.getElementById('app');
+
+const I = {
+  home: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  car: '<path d="M3 13l2-5a2 2 0 0 1 2-1.3h10A2 2 0 0 1 19 8l2 5v4a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1v-1h-11v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h18M7 15.5h.01M17 15.5h.01"/>',
+  drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  chart: '<path d="M4 20V10M12 20V4M20 20v-7"/>',
+  wallet: '<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M16 13h2M3 10h18"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M20 21v-1a5 5 0 0 0-5-5H9a5 5 0 0 0-5 5v1"/>',
+  more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  back: '<path d="M15 6l-6 6 6 6"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  share: '<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14"/>'
+};
+const ic = (n, s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const grp = (v, dec) => { const n = Math.round((Number(v) || 0) * 100) / 100; const [i, f] = Math.abs(n).toFixed(dec).split('.'); const s = i.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0'); return (n < 0 ? '−' : '') + s + (f && +f ? ',' + f : ''); };
+const money = v => grp(v, 2) + '\u00a0₼';
+const kmf = v => grp(v, 0) + '\u00a0km';
+const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+const r2 = v => Math.round((v + 1e-9) * 100) / 100;
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = () => ymd(new Date());
+const fmtDate = s => s ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : '';
+const MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avqust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'];
+const DAYS = ['Bazar', 'Bazar ertəsi', 'Çərşənbə axşamı', 'Çərşənbə', 'Cümə axşamı', 'Cümə', 'Şənbə'];
+const longToday = () => { const d = new Date(); return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`; };
+const isAdmin = () => S.user && S.user.rol === 'admin';
+const NOV = { xerc: 'Xərc', usta_odenisi: 'Ustaya ödəniş', tehvil: 'Təhvil', duzelis: 'Düzəliş' };
+
+function periods() {
+  const d = new Date(), t = ymd(d);
+  const wd = (d.getDay() + 6) % 7, ws = new Date(d); ws.setDate(d.getDate() - wd);
+  const ms = new Date(d.getFullYear(), d.getMonth(), 1);
+  return { gun: [t, t], hefte: [ymd(ws), t], ay: [ymd(ms), t] };
+}
+
+async function api(action, body = {}, quiet) {
+  if (!API || API.indexOf('http') !== 0) throw new Error('config.js-də API_URL yazılmayıb');
+  if (!quiet) loading(true);
+  try {
+    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ action, token: S.token, ...body }) });
+    const j = await res.json();
+    if (!j.ok) {
+      if (j.auth) { logout(); }
+      throw new Error(j.error || 'Xəta');
+    }
+    return j.data;
+  } catch (e) {
+    if (e instanceof TypeError) throw new Error('İnternet bağlantısını yoxlayın');
+    throw e;
+  } finally { if (!quiet) loading(false); }
+}
+
+function loading(on) {
+  let el = document.querySelector('.loading');
+  if (on && !el) { el = document.createElement('div'); el.className = 'loading'; el.innerHTML = '<div class="spinner"></div>'; document.body.appendChild(el); }
+  if (!on && el) el.remove();
+}
+function toast(msg, ok) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast' + (ok ? ' ok' : ''); t.setAttribute('role', 'status'); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 3500);
+}
+async function run(fn) { try { await fn(); } catch (e) { toast(e.message); } }
+
+function go(view, params = {}, push = true) {
+  if (push) S.history.push({ view: S.view, params: S.params });
+  S.view = view; S.params = params; render(); window.scrollTo(0, 0);
+}
+function back() { const h = S.history.pop(); if (h) { S.view = h.view; S.params = h.params; render(); } else go('home', {}, false); }
+function tab(view) { S.history = []; go(view, {}, false); }
+function logout() { localStorage.removeItem('token'); S.token = ''; S.user = null; S.history = []; S.view = 'login'; render(); }
+
+// ------------------------------------------------------------- Render
+const VIEWS = {};
+async function render() {
+  if (!S.token) S.view = S.view === 'setup' ? 'setup' : 'login';
+  const v = VIEWS[S.view] || VIEWS.home;
+  try {
+    const html = await v(S.params);
+    if (html === null) return;
+    $app.innerHTML = `<main>${html}</main>${S.user && !['login', 'changePin'].includes(S.view) ? nav() : ''}`;
+    const f = $app.querySelector('[autofocus]'); if (f) f.focus();
+    if (v.after) v.after(S.params);
+  } catch (e) {
+    $app.innerHTML = `<main><div class="card"><b>Xəta</b><span class="muted">${esc(e.message)}</span><button class="btn" data-act="retry">Yenidən cəhd et</button></div></main>${S.user ? nav() : ''}`;
+  }
+}
+
+function nav() {
+  const items = isAdmin()
+    ? [['home', 'chart', 'Hesabat'], ['kassa', 'wallet', 'Kassa'], ['products', 'drop', 'Yağlar'], ['more', 'more', 'Daha']]
+    : [['home', 'home', 'Əsas'], ['cars', 'car', 'Maşınlar'], ...(S.user.kassa ? [['kassa', 'wallet', 'Kassa']] : []), ['me', 'user', 'Mən']];
+  const cur = { carHistory: 'cars', carForm: 'cars', report: 'home', users: 'more', settings: 'more', kassaHistory: 'kassa', productForm: 'products', purchaseForm: 'products' }[S.view] || S.view;
+  return `<nav class="bottom" aria-label="Menyu"><div class="in">${items.map(([v, i, t]) => `<button data-tab="${v}" class="${cur === v ? 'on' : ''}">${ic(i)}${t}</button>`).join('')}</div></nav>`;
+}
+
+const backBtn = (t = 'Geri') => `<button class="back" data-act="back">${ic('back', 18)}${t}</button>`;
+
+// ------------------------------------------------------------- Giriş
+VIEWS.login = () => `
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px">
+    <div><div class="muted">Xoş gəlmisiniz</div><h1>${esc(S.settings.servis_adi || 'AQQA Servis')}</h1></div>
+    <form class="card" data-form="login">
+      <label class="field">Telefon<input name="phone" type="tel" inputmode="tel" placeholder="050 000 00 00" autocomplete="username" required autofocus></label>
+      <label class="field">PIN<input name="pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" autocomplete="current-password" required></label>
+      <button class="btn primary big" type="submit">Daxil ol</button>
+    </form>
+  </div>`;
+
+VIEWS.changePin = () => `
+  <h1>PIN-i dəyişin</h1>
+  <p class="muted" style="margin:0">İlk girişdə verilmiş PIN-i öz PIN-inizlə əvəz edin (4–6 rəqəm).</p>
+  <form class="card" data-form="changePin">
+    <label class="field">Hazırkı PIN<input name="oldPin" type="password" inputmode="numeric" required autofocus></label>
+    <label class="field">Yeni PIN<input name="newPin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" required></label>
+    <label class="field">Yeni PIN təkrar<input name="newPin2" type="password" inputmode="numeric" required></label>
+    <button class="btn primary big" type="submit">Yadda saxla</button>
+  </form>`;
+
+// ------------------------------------------------------------- Usta: Əsas
+VIEWS.home = async (p) => {
+  if (isAdmin()) return VIEWS.report(p && p.preset ? p : { preset: 'gun' });
+  const b = await api('bootstrap', {}, !!S.boot);
+  S.boot = b; S.settings = b.settings; S.products = b.products; S.user = b.user;
+  const t = b.today;
+  return `
+  <div class="between">
+    <div><div class="muted">${longToday()}</div><h1>Bugünkü iş</h1></div>
+    <button class="icon-btn" data-tab="me" aria-label="Profil">${ic('user', 20)}</button>
+  </div>
+  <div class="card">
+    <div class="between" style="align-items:flex-end">
+      <div><div class="muted">Mənim qazancım</div><div class="big">${money(t.qazanc)}</div></div>
+      <span class="muted">${t.is_sayi} maşın</span>
+    </div>
+    <div class="grid3">
+      <div class="stat"><span>Usta haqqı</span><b>${money(t.usta_haqqi)}</b></div>
+      <div class="stat"><span>Təmir</span><b>${money(t.temir)}</b></div>
+      <div class="stat"><span>Satış cəmi</span><b>${money(t.satis)}</b></div>
+    </div>
+  </div>
+  <button class="btn primary big" data-act="newJob">${ic('plus')}Yeni iş</button>
+  <form class="search" data-form="carSearch" role="search">${ic('search', 18)}<input name="q" placeholder="Nömrə, marka və ya müştəri" aria-label="Maşın axtar"></form>
+  <div class="between"><h2>Son maşınlar</h2><button class="btn ghost small" data-tab="cars">Hamısı</button></div>
+  <div class="list">${b.recent.length ? b.recent.map(r => carRow(r.car, `${fmtDate(r.tarix)} · ${esc(r.xulase)}`, money(r.umumi))).join('') : '<div class="empty">Hələ iş yoxdur. "Yeni iş" ilə başlayın.</div>'}</div>`;
+};
+
+const carRow = (c, sub, right = '', act = 'openCar') => `
+  <button class="item" data-act="${act}" data-id="${esc(c.car_id)}">
+    <span class="plate">${esc(c.nomre)}</span>
+    <span class="grow"><span>${esc([c.marka, c.model].filter(Boolean).join(' '))}${c.musteri ? ' · ' + esc(c.musteri) : ''}</span><span class="muted">${sub}</span></span>
+    ${right ? `<b style="font-size:14px">${right}</b>` : ''}
+  </button>`;
+
+// ------------------------------------------------------------- Maşınlar
+VIEWS.cars = async (p) => {
+  const list = await api('searchCars', { q: p.q || '' });
+  const pick = p.pick;
+  return `
+  ${pick ? backBtn() : ''}
+  <div class="between"><h1>${pick ? 'Maşın seçin' : 'Maşınlar'}</h1><button class="btn small primary" data-act="newCar" data-pick="${pick ? 1 : ''}">${ic('plus', 18)}Yeni</button></div>
+  <form class="search" data-form="carSearch" data-pick="${pick ? 1 : ''}" role="search">${ic('search', 18)}<input name="q" value="${esc(p.q || '')}" placeholder="Nömrə, marka və ya müştəri" aria-label="Maşın axtar" ${pick ? 'autofocus' : ''}></form>
+  <div class="list">${list.length ? list.map(c => carRow(c, c.son_km ? `Son: ${kmf(c.son_km)}${c.novbeti_km ? ' · növbəti ' + kmf(c.novbeti_km) : ''}` : 'Hələ iş yoxdur', '', pick ? 'pickCar' : 'openCar')).join('') : '<div class="empty">Tapılmadı. "Yeni" ilə əlavə edin.</div>'}</div>`;
+};
+
+VIEWS.carForm = (p) => {
+  const c = p.car || { nomre: p.q || '' };
+  return `
+  ${backBtn()}
+  <h1>${c.car_id ? 'Maşını düzəlt' : 'Yeni maşın'}</h1>
+  <form class="card" data-form="car" data-pick="${p.pick ? 1 : ''}">
+    <input type="hidden" name="car_id" value="${esc(c.car_id || '')}">
+    <label class="field">Dövlət nömrəsi<input name="nomre" value="${esc(c.nomre || '')}" placeholder="10-AB-123" required autofocus style="text-transform:uppercase"></label>
+    <div class="grid2">
+      <label class="field">Marka<input name="marka" value="${esc(c.marka || '')}" placeholder="Toyota"></label>
+      <label class="field">Model<input name="model" value="${esc(c.model || '')}" placeholder="Camry"></label>
+    </div>
+    <label class="field">Buraxılış ili<input name="il" value="${esc(c.il || '')}" inputmode="numeric"></label>
+    <label class="field">Müştəri adı<input name="musteri" value="${esc(c.musteri || '')}"></label>
+    <label class="field">Müştəri telefonu (WhatsApp üçün)<input name="telefon" type="tel" inputmode="tel" value="${esc(c.telefon || '')}" placeholder="050 000 00 00"></label>
+    <button class="btn primary big" type="submit">Yadda saxla</button>
+  </form>`;
+};
+
+VIEWS.carHistory = async (p) => {
+  const h = await api('carHistory', { car_id: p.car_id });
+  const c = h.car;
+  S.params.car = c;
+  return `
+  ${backBtn()}
+  <div class="card">
+    <div class="between"><span class="plate" style="font-size:14px">${esc(c.nomre)}</span><button class="btn small" data-act="editCar">Düzəlt</button></div>
+    <div><h1 style="font-size:20px">${esc([c.marka, c.model, c.il].filter(Boolean).join(' ') || 'Maşın')}</h1><div class="muted">${esc(c.musteri || '')}${c.telefon ? ' · ' + esc(c.telefon) : ''}</div></div>
+    <div class="grid2">
+      <div class="stat"><span>Son km</span><b>${c.son_km ? kmf(c.son_km) : '—'}</b></div>
+      <div class="stat"><span>Növbəti yağ dəyişməsi</span><b>${c.novbeti_km ? kmf(c.novbeti_km) : '—'}</b></div>
+    </div>
+  </div>
+  ${isAdmin() ? '' : `<button class="btn primary big" data-act="jobForCar">${ic('plus')}Bu maşına yeni iş</button>`}
+  <h2>Tarixçə · ${h.jobs.length} iş</h2>
+  <div class="list">${h.jobs.length ? h.jobs.map(j => `
+    <button class="item" data-act="openReceipt" data-id="${esc(j.job_id)}" style="align-items:flex-start">
+      <span class="grow">
+        <span>${fmtDate(j.tarix)} · ${kmf(j.km)}</span>
+        <span class="muted">${j.items.map(i => esc(i.ad) + (i.nov === 'mal' && i.miqdar !== 1 ? ' × ' + i.miqdar : '')).join(', ') || 'Usta xidməti'}</span>
+        <span class="muted">Usta: ${esc(j.usta)} · Qəbz №${esc(j.qebz)}</span>
+      </span>
+      <b style="font-size:14px">${money(j.umumi)}</b>
+    </button>`).join('') : '<div class="empty">Bu maşına hələ iş qeyd olunmayıb.</div>'}</div>`;
+};
+
+// ------------------------------------------------------------- Yeni iş
+function jobDraft() { return S.draft || (S.draft = { car: null, km: '', items: [], usta_haqqi: '', pay: 'nagd', nagd: '', kart: '', novbeti_km: '', qeyd: '' }); }
+function jobTotals(d) {
+  const mallar = d.items.filter(i => i.nov === 'mal').reduce((s, i) => s + num(i.miqdar) * num(i.qiymet), 0);
+  const temir = d.items.filter(i => i.nov === 'temir').reduce((s, i) => s + num(i.qiymet), 0);
+  return { mallar: r2(mallar), temir: r2(temir), umumi: r2(mallar + temir + num(d.usta_haqqi)) };
+}
+
+VIEWS.job = async () => {
+  const d = jobDraft();
+  if (!S.products.length) { const b = await api('bootstrap'); S.products = b.products; S.settings = b.settings; }
+  const c = d.car;
+  const t = jobTotals(d);
+  const prodOpts = S.products.filter(p => p.aktiv).map(p => `<option value="${esc(p.product_id)}">${esc(p.label)} — qalıq ${p.qaliq} ${esc(p.vahid)}</option>`).join('');
+  const interval = num(S.settings.interval_km) || 10000;
+  const suggestedNext = d.km && d.items.some(i => i.nov === 'mal') ? num(d.km) + interval : '';
+  return `
+  <div class="between">${backBtn('Ləğv et')}<span class="muted">Yeni iş</span></div>
+  ${c ? `
+  <div class="card">
+    <div class="between"><span class="plate" style="font-size:14px">${esc(c.nomre)}</span><button class="btn small" data-act="changeCar">Dəyiş</button></div>
+    <div class="muted">${esc([c.marka, c.model].filter(Boolean).join(' '))}${c.musteri ? ' · ' + esc(c.musteri) : ''}${c.son_km ? ' · son ' + kmf(c.son_km) : ''}</div>
+    <label class="field">Hazırkı km<input name="km" data-bind="km" inputmode="numeric" value="${esc(d.km)}" placeholder="${c.son_km ? 'son: ' + c.son_km : 'məs. 142350'}"></label>
+    ${d.km && c.son_km && num(d.km) < num(c.son_km) ? `<span class="pill bad">Km əvvəlkindən (${kmf(c.son_km)}) azdır — yoxlayın</span>` : ''}
+  </div>` : `<button class="btn big" data-act="changeCar">${ic('car')}Maşın seçin</button>`}
+
+  <div class="card">
+    <div class="between"><h2>Yağ və mallar</h2></div>
+    ${d.items.map((it, ix) => it.nov === 'mal' ? matRow(it, ix) : '').join('')}
+    <div class="row">
+      <select data-new="product" aria-label="Məhsul seç" style="flex:1"><option value="">+ Məhsul əlavə et</option>${prodOpts}</select>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Təmir işləri</h2>
+    ${d.items.map((it, ix) => it.nov === 'temir' ? `
+      <div class="row">
+        <input aria-label="İşin adı" data-item="${ix}" data-f="ad" value="${esc(it.ad)}" placeholder="İşin adı" style="flex:2">
+        <input aria-label="Qiymət" data-item="${ix}" data-f="qiymet" value="${esc(it.qiymet)}" inputmode="decimal" placeholder="₼" style="flex:1">
+        <button class="icon-btn" data-act="delItem" data-ix="${ix}" aria-label="Sil">${ic('x', 18)}</button>
+      </div>` : '').join('')}
+    <button class="btn" data-act="addRepair">${ic('wrench', 18)}Təmir işi əlavə et</button>
+  </div>
+
+  <div class="card">
+    <label class="field">Usta haqqı (₼)<input data-bind="usta_haqqi" inputmode="decimal" value="${esc(d.usta_haqqi)}" placeholder="0"></label>
+    <div class="grid3">
+      <div class="stat"><span>Mallar</span><b data-sum="mallar">${money(t.mallar)}</b></div>
+      <div class="stat"><span>Təmir</span><b data-sum="temir">${money(t.temir)}</b></div>
+      <div class="stat"><span>Cəmi</span><b data-sum="umumi" style="color:var(--accent)">${money(t.umumi)}</b></div>
+    </div>
+    <div class="seg" role="group" aria-label="Ödəniş növü">
+      ${[['nagd', 'Nağd'], ['kart', 'Kart'], ['qarisiq', 'Qarışıq']].map(([k, l]) => `<button type="button" data-pay="${k}" class="${d.pay === k ? 'on' : ''}">${l}</button>`).join('')}
+    </div>
+    ${d.pay === 'qarisiq' ? `<div class="grid2">
+      <label class="field">Nağd (₼)<input data-bind="nagd" inputmode="decimal" value="${esc(d.nagd)}"></label>
+      <label class="field">Kart (₼)<input data-bind="kart" inputmode="decimal" value="${esc(d.kart)}"></label></div>` : ''}
+    <label class="field">Növbəti yağ dəyişməsi (km)<input data-bind="novbeti_km" inputmode="numeric" value="${esc(d.novbeti_km)}" placeholder="${suggestedNext ? 'təklif: ' + suggestedNext : 'avtomatik'}"></label>
+    <label class="field">Qeyd<input data-bind="qeyd" value="${esc(d.qeyd)}" placeholder="istəyə bağlı"></label>
+  </div>
+  <button class="btn primary big" data-act="saveJob" ${c ? '' : 'disabled'}>Yadda saxla · <span data-sum="umumi2">${money(t.umumi)}</span></button>`;
+};
+
+function matRow(it, ix) {
+  const p = S.products.find(x => x.product_id === it.product_id) || {};
+  const low = num(it.qiymet) < num(p.min_qiymet);
+  return `
+  <div style="display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--line)">
+    <div class="between"><span style="font-weight:500">${esc(p.label || it.ad)}</span><button class="icon-btn" data-act="delItem" data-ix="${ix}" aria-label="Sil">${ic('x', 18)}</button></div>
+    <div class="grid2">
+      <label class="field">${p.vahid === 'litr' ? 'Litr' : 'Say'}<input data-item="${ix}" data-f="miqdar" inputmode="decimal" value="${esc(it.miqdar)}"></label>
+      <label class="field">Qiymət (₼ / ${p.vahid === 'litr' ? 'L' : 'ədəd'})<input data-item="${ix}" data-f="qiymet" inputmode="decimal" value="${esc(it.qiymet)}"></label>
+    </div>
+    <span class="muted" data-hint="${ix}">Tövsiyə ${money(p.tovsiye_qiymet)} · minimum ${money(p.min_qiymet)}${low ? ' — <b style="color:var(--danger)">minimumdan aşağıdır</b>' : ''}</span>
+  </div>`;
+}
+
+function refreshTotals() {
+  const t = jobTotals(jobDraft());
+  const set = (k, v) => { const el = $app.querySelector(`[data-sum="${k}"]`); if (el) el.textContent = money(v); };
+  set('mallar', t.mallar); set('temir', t.temir); set('umumi', t.umumi); set('umumi2', t.umumi);
+}
+
+// ------------------------------------------------------------- Qəbz
+VIEWS.receipt = async (p) => {
+  const r = p.data || await api('receipt', { job_id: p.job_id });
+  S.params.data = r;
+  const j = r.job, c = r.car, s = r.settings;
+  const mal = r.items.filter(i => i.nov === 'mal'), tem = r.items.filter(i => i.nov === 'temir');
+  const canCancel = j.status !== 'legv' && (isAdmin() || (j.user_id === S.user.id && j.tarix === today()));
+  return `
+  ${p.fresh ? `<div class="between"><button class="back" data-act="home">${ic('back', 18)}Əsasa qayıt</button><span class="pill ok">Yadda saxlanıldı</span></div>` : backBtn()}
+  <div class="receipt">
+    <div style="text-align:center"><b style="font-size:17px">${esc(s.servis_adi)}</b><div class="muted">${esc([s.unvan, s.telefon].filter(Boolean).join(' · '))}</div></div>
+    <div class="line muted"><span>Qəbz №${esc(j.qebz)}</span><span>${fmtDate(j.tarix_saat.slice(0, 10))} ${esc(j.tarix_saat.slice(11))}</span></div>
+    ${j.status === 'legv' ? '<b style="color:#B42318;text-align:center">LƏĞV EDİLİB</b>' : ''}
+    <hr>
+    <div class="line"><span>Maşın</span><b>${esc(c.nomre)} · ${esc([c.marka, c.model, c.il].filter(Boolean).join(' '))}</b></div>
+    ${c.musteri ? `<div class="line"><span>Müştəri</span><span>${esc(c.musteri)}</span></div>` : ''}
+    <div class="line"><span>Km</span><span>${kmf(j.km)}</span></div>
+    <div class="line"><span>Usta</span><span>${esc(r.usta)}</span></div>
+    <hr>
+    ${mal.length ? `<b>Mallar</b>${mal.map(i => `<div class="line"><span>${esc(i.ad)}<br><span class="muted">${i.miqdar} × ${money(i.qiymet)}</span></span><span>${money(i.cemi)}</span></div>`).join('')}` : ''}
+    ${tem.length ? `<b>Təmir</b>${tem.map(i => `<div class="line"><span>${esc(i.ad)}</span><span>${money(i.cemi)}</span></div>`).join('')}` : ''}
+    ${j.usta_haqqi ? `<div class="line"><span>Usta haqqı</span><span>${money(j.usta_haqqi)}</span></div>` : ''}
+    <hr>
+    <div class="line" style="font-size:18px"><b>CƏMİ</b><b>${money(j.umumi)}</b></div>
+    <div class="line muted"><span>Ödəniş</span><span>${payText(j)}</span></div>
+    ${j.novbeti_km ? `<hr><div class="line"><span>Növbəti yağ dəyişməsi</span><b>${kmf(j.novbeti_km)}</b></div>` : ''}
+    ${r.tarixce.length ? `<hr><b>Son xidmətlər</b>${r.tarixce.map(x => `<div class="line muted"><span>${fmtDate(x.tarix)} · ${kmf(x.km)}</span><span style="text-align:right">${esc(x.xulase)}</span></div>`).join('')}` : ''}
+    ${s.alt_qeyd ? `<div style="text-align:center;margin-top:6px">${esc(s.alt_qeyd)}</div>` : ''}
+  </div>
+  <button class="btn primary big" data-act="whatsapp">${ic('share')}WhatsApp-da paylaş</button>
+  ${canCancel ? `<button class="btn danger" data-act="cancelJob">İşi ləğv et</button>` : ''}`;
+};
+
+const payText = j => j.kart && j.nagd ? `Nağd ${money(j.nagd)}, kart ${money(j.kart)}` : j.kart ? 'Kart' : 'Nağd';
+
+function receiptText(r) {
+  const j = r.job, c = r.car, s = r.settings, L = [];
+  L.push(`*${s.servis_adi}*${s.telefon ? ' · ' + s.telefon : ''}`);
+  L.push(`Qəbz №${j.qebz} · ${fmtDate(j.tarix_saat.slice(0, 10))} ${j.tarix_saat.slice(11)}`, '');
+  L.push(`Maşın: ${c.nomre} · ${[c.marka, c.model, c.il].filter(Boolean).join(' ')}`);
+  if (c.musteri) L.push(`Müştəri: ${c.musteri}`);
+  L.push(`Km: ${kmf(j.km)} · Usta: ${r.usta}`, '');
+  const mal = r.items.filter(i => i.nov === 'mal'), tem = r.items.filter(i => i.nov === 'temir');
+  if (mal.length) { L.push('*Mallar*'); mal.forEach(i => L.push(`  ${i.ad}: ${i.miqdar} × ${money(i.qiymet)} = ${money(i.cemi)}`)); }
+  if (tem.length) { L.push('*Təmir*'); tem.forEach(i => L.push(`  ${i.ad}: ${money(i.cemi)}`)); }
+  if (j.usta_haqqi) L.push(`Usta haqqı: ${money(j.usta_haqqi)}`);
+  L.push('', `*CƏMİ: ${money(j.umumi)}* (${payText(j)})`);
+  if (j.novbeti_km) L.push('', `Növbəti yağ dəyişməsi: ${kmf(j.novbeti_km)}`);
+  if (r.tarixce.length) { L.push('', '*Son xidmətlər*'); r.tarixce.forEach(x => L.push(`  ${fmtDate(x.tarix)} · ${kmf(x.km)} · ${x.xulase}`)); }
+  if (s.alt_qeyd) L.push('', s.alt_qeyd);
+  return L.join('\n');
+}
+function waPhone(p) { let d = String(p || '').replace(/\D/g, ''); if (!d) return ''; if (d.startsWith('994')) return d; if (d.startsWith('0')) d = d.slice(1); return '994' + d; }
+
+// ------------------------------------------------------------- Usta: Mən
+VIEWS.me = async (p) => {
+  const key = p.preset || 'gun';
+  const [from, to] = periods()[key];
+  const s = await api('myStats', { from, to });
+  return `
+  <div class="between"><div><div class="muted">${esc(S.user.telefon)}</div><h1>${esc(S.user.ad)}</h1></div></div>
+  ${presetSeg(key, 'me')}
+  <div class="card">
+    <div><div class="muted">Qazancım (usta haqqı + təmir)</div><div class="big">${money(s.qazanc)}</div></div>
+    <div class="grid3">
+      <div class="stat"><span>İş sayı</span><b>${s.is_sayi}</b></div>
+      <div class="stat"><span>Nağd hissə</span><b>${money(s.nagd)}</b></div>
+      <div class="stat"><span>Kart hissə</span><b>${money(s.kart)}</b></div>
+    </div>
+    <div class="grid2">
+      <div class="stat"><span>Usta haqqı</span><b>${money(s.usta_haqqi)}</b></div>
+      <div class="stat"><span>Təmir</span><b>${money(s.temir)}</b></div>
+    </div>
+  </div>
+  <button class="btn" data-act="toChangePin">PIN-i dəyiş</button>
+  <button class="btn danger" data-act="logout">Çıxış</button>`;
+};
+
+const presetSeg = (key, view) => `<div class="seg" role="group" aria-label="Dövr">${[['gun', 'Bu gün'], ['hefte', 'Bu həftə'], ['ay', 'Bu ay']].map(([k, l]) => `<button data-preset="${k}" data-view="${view}" class="${key === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+
+// ------------------------------------------------------------- Kassa
+VIEWS.kassa = async () => {
+  const k = await api('kassaToday');
+  const f = k.axin;
+  const admin = isAdmin();
+  return `
+  <div class="between"><div><div class="muted">${longToday()}</div><h1>Kassa</h1></div>${admin ? `<button class="btn small" data-act="kassaHistory">Tarixçə</button>` : ''}</div>
+  ${k.aciq_gunler.length ? `<span class="pill bad">Bağlanmamış gün var: ${k.aciq_gunler.map(fmtDate).join(', ')}</span>` : ''}
+  ${k.baglanib ? `<span class="pill ok">Gün bağlanıb · fərq ${money(k.ferq)}</span>` : ''}
+  <div class="card">
+    <div class="between" style="align-items:flex-end"><div><div class="muted">Kassada olmalı nağd</div><div class="big">${money(k.hesablanan)}</div></div></div>
+    <div class="grid2">
+      <div class="stat"><span>Dünənki qalıq</span><b>${money(k.acilis)}</b></div>
+      <div class="stat"><span>Nağd daxilolma</span><b>${money(f.nagd_daxil)}</b></div>
+      <div class="stat"><span>Kart (bankda)</span><b>${money(f.kart_daxil)}</b></div>
+      <div class="stat"><span>Xərclər</span><b>${money(f.xerc)}</b></div>
+      <div class="stat"><span>Ustalara ödənib</span><b>${money(f.usta_odenisi)}</b></div>
+      <div class="stat"><span>Təhvil</span><b>${money(f.tehvil)}</b></div>
+    </div>
+  </div>
+  <h2>Ustalara bu gün</h2>
+  <div class="card scroll">${k.ustalar.length ? `<table>
+    <tr><th>Usta</th><th class="r">Cəmi</th><th class="r">Kart</th><th class="r">Nağd qalır</th>${admin && !k.baglanib ? '<th></th>' : ''}</tr>
+    ${k.ustalar.map(u => `<tr><td>${esc(u.ad)}</td><td class="r">${money(u.cemi)}</td><td class="r">${money(u.kart)}</td><td class="r"><b>${money(u.qalir)}</b></td>
+      ${admin && !k.baglanib ? `<td class="r">${u.qalir > 0 ? `<button class="btn small primary" data-act="payUsta" data-id="${esc(u.user_id)}" data-amt="${u.qalir}" data-name="${esc(u.ad)}">Ödə</button>` : '✓'}</td>` : ''}</tr>`).join('')}
+  </table><span class="muted">Kart hissəsi kassadan nağd verilmir.</span>` : '<div class="empty">Bu gün iş yoxdur.</div>'}</div>
+  ${admin ? `
+  ${k.hereketler && k.hereketler.length ? `<h2>Bu günün hərəkətləri</h2><div class="list">${k.hereketler.map(m => `
+    <div class="item" style="cursor:default"><span class="grow"><span>${NOV[m.nov]}${m.alan ? ' · ' + esc(m.alan) : ''}</span><span class="muted">${esc(m.saat)}${m.sebeb ? ' · ' + esc(m.sebeb) : ''}</span></span><b>${money(m.mebleg)}</b>
+    <button class="btn small" data-act="editMove" data-id="${esc(m.move_id)}" data-amt="${m.mebleg}">Düzəlt</button></div>`).join('')}</div>` : ''}
+  ${k.baglanib ? '' : `
+  <form class="card" data-form="cashMove">
+    <h2>Xərc və ya təhvil</h2>
+    <div class="seg" role="group" aria-label="Növ"><button type="button" data-movetype="xerc" class="on">Xərc</button><button type="button" data-movetype="tehvil">Təhvil</button></div>
+    <input type="hidden" name="nov" value="xerc">
+    <div class="grid2"><label class="field">Məbləğ (₼)<input name="mebleg" inputmode="decimal" required></label><label class="field">Səbəb<input name="sebeb" placeholder="məs. su, çörək"></label></div>
+    <button class="btn" type="submit">Əlavə et</button>
+  </form>
+  <form class="card" data-form="closeDay">
+    <h2>Günü bağla</h2>
+    <span class="muted">Kassanı fiziki sayın və faktiki nağd məbləği yazın.</span>
+    <label class="field">Faktiki nağd (₼)<input name="faktiki" inputmode="decimal" required></label>
+    <button class="btn primary big" type="submit">Kassanı bağla</button>
+  </form>`}` : ''}`;
+};
+
+VIEWS.kassaHistory = async (p) => {
+  const key = p.preset || 'ay';
+  const [from, to] = periods()[key];
+  const days = await api('kassaHistory', { from, to });
+  S.params.range = [from, to];
+  return `
+  ${backBtn()}<h1>Kassa tarixçəsi</h1>
+  ${presetSeg(key, 'kassaHistory')}
+  <div class="card scroll">${days.length ? `<table>
+    <tr><th>Tarix</th><th class="r">Açılış</th><th class="r">Nağd +</th><th class="r">Çıxış</th><th class="r">Olmalı</th><th class="r">Faktiki</th><th class="r">Fərq</th></tr>
+    ${days.map(d => `<tr>
+      <td>${fmtDate(d.tarix)}${d.baglanib ? '' : '<br><span class="pill bad">açıq</span>'}</td><td class="r">${money(d.acilis)}</td><td class="r">${money(d.axin.nagd_daxil)}</td>
+      <td class="r">${money(d.axin.xerc + d.axin.usta_odenisi + d.axin.tehvil)}</td><td class="r">${money(d.hesablanan)}</td>
+      <td class="r">${d.baglanib ? `<button class="btn small" data-act="editDay" data-id="${esc(d.day_id)}" data-amt="${d.faktiki}">${money(d.faktiki)}</button>` : '—'}</td>
+      <td class="r" style="color:${d.ferq < 0 ? 'var(--danger)' : 'inherit'}">${d.ferq === null ? '—' : money(d.ferq)}</td></tr>`).join('')}
+  </table>` : '<div class="empty">Bu dövrdə hərəkət yoxdur.</div>'}</div>
+  <span class="muted">Faktiki məbləğə toxunaraq düzəliş edin. Hər düzəliş səbəbi ilə qeyd olunur.</span>`;
+};
+
+// ------------------------------------------------------------- Admin: Hesabat
+VIEWS.report = async (p) => {
+  const key = p.preset || 'gun';
+  const [from, to] = p.from ? [p.from, p.to] : periods()[key];
+  const r = await api('report', { from, to });
+  const t = r.cem;
+  if (!S.settings.servis_adi) { api('bootstrap', {}, true).then(b => { S.settings = b.settings; S.products = b.products; }).catch(() => {}); }
+  return `
+  <div class="between"><div><div class="muted">${longToday()}</div><h1>Hesabat</h1></div><button class="icon-btn" data-tab="more" aria-label="Daha">${ic('more', 20)}</button></div>
+  ${presetSeg(key, 'home')}
+  <form class="grid2" data-form="range">
+    <label class="field">Başlanğıc<input type="date" name="from" value="${from}" onchange="this.form.requestSubmit()"></label>
+    <label class="field">Son<input type="date" name="to" value="${to}" onchange="this.form.requestSubmit()"></label>
+  </form>
+  <div class="card">
+    <div class="between" style="align-items:flex-end"><div><div class="muted">Ümumi dövriyyə</div><div class="big">${money(t.umumi)}</div></div><span class="muted">${t.is_sayi} iş</span></div>
+    <div class="grid3">
+      <div class="stat"><span>Mal satışı</span><b>${money(t.mallar)}</b></div>
+      <div class="stat"><span>Maya</span><b>${money(t.maya)}</b></div>
+      <div class="stat"><span>Mal mənfəəti</span><b>${money(t.menfeet)}</b></div>
+      <div class="stat"><span>Usta haqqı</span><b>${money(t.usta_haqqi)}</b></div>
+      <div class="stat"><span>Təmir</span><b>${money(t.temir)}</b></div>
+      <div class="stat"><span>Xərclər</span><b>${money(t.xerc)}</b></div>
+      <div class="stat"><span>Nağd</span><b>${money(t.nagd)}</b></div>
+      <div class="stat"><span>Kart</span><b>${money(t.kart)}</b></div>
+      <div class="stat"><span>Xalis gəlir</span><b style="color:var(--accent)">${money(t.xalis)}</b></div>
+    </div>
+    <span class="muted">Xalis gəlir = mal mənfəəti − xərclər. Usta haqqı və təmir tam ustalarındır.</span>
+  </div>
+  <h2>Ustalar</h2>
+  <div class="card scroll">${r.ustalar.length ? `<table><tr><th>Usta</th><th class="r">İş</th><th class="r">Usta haqqı</th><th class="r">Təmir</th><th class="r">Qazanc</th></tr>
+    ${r.ustalar.map(u => `<tr><td>${esc(u.ad)}</td><td class="r">${u.is_sayi}</td><td class="r">${money(u.usta_haqqi)}</td><td class="r">${money(u.temir)}</td><td class="r"><b>${money(u.qazanc)}</b></td></tr>`).join('')}</table>` : '<div class="empty">Bu dövrdə iş yoxdur.</div>'}</div>
+  ${r.mehsullar.length ? `<h2>Ən çox satılan</h2><div class="card scroll"><table><tr><th>Məhsul</th><th class="r">Miqdar</th><th class="r">Satış</th><th class="r">Mənfəət</th></tr>
+    ${r.mehsullar.map(m => `<tr><td>${esc(m.ad)}</td><td class="r">${m.miqdar}</td><td class="r">${money(m.satis)}</td><td class="r">${money(m.menfeet)}</td></tr>`).join('')}</table></div>` : ''}
+  ${r.az_qalan.length ? `<h2>Az qalan</h2><div class="list">${r.az_qalan.map(x => `<div class="item" style="cursor:default"><span class="grow"><span>${esc(x.ad)}</span></span><span class="pill bad">${x.qaliq} ${esc(x.vahid)}</span></div>`).join('')}</div>` : ''}`;
+};
+
+// ------------------------------------------------------------- Admin: Yağlar
+VIEWS.products = async () => {
+  const list = await api('products');
+  S.products = list;
+  return `
+  <div class="between"><h1>Yağlar və mallar</h1><button class="btn small primary" data-act="newProduct">${ic('plus', 18)}Yeni</button></div>
+  <button class="btn" data-act="newPurchase">${ic('plus', 18)}Alış qeyd et</button>
+  <div class="list">${list.length ? list.map(p => `
+    <button class="item" data-act="editProduct" data-id="${esc(p.product_id)}">
+      <span class="grow"><span>${esc(p.label)}${p.aktiv ? '' : ' (deaktiv)'}</span>
+      <span class="muted">Tövsiyə ${money(p.tovsiye_qiymet)} · min ${money(p.min_qiymet)} · maya ${money(p.orta_maya)}</span></span>
+      <span class="pill ${p.min_qaliq && p.qaliq <= p.min_qaliq ? 'bad' : ''}">${p.qaliq} ${esc(p.vahid)}</span>
+    </button>`).join('') : '<div class="empty">Hələ məhsul yoxdur. "Yeni" ilə əlavə edin.</div>'}</div>
+  <button class="btn ghost" data-act="purchaseList">Son alışlar</button>`;
+};
+
+VIEWS.productForm = (p) => {
+  const x = p.product || { nov: 'yag', vahid: 'qab', aktiv: true };
+  const tara = ['1 L', '2 L', '4 L', '5 L', 'Boçka', 'Ədəd'];
+  return `
+  ${backBtn()}<h1>${x.product_id ? 'Məhsulu düzəlt' : 'Yeni məhsul'}</h1>
+  <form class="card" data-form="product">
+    <input type="hidden" name="product_id" value="${esc(x.product_id || '')}">
+    <label class="field">Ad (marka)<input name="ad" value="${esc(x.ad || '')}" placeholder="məs. Mobil Super" required autofocus></label>
+    <div class="grid2">
+      <label class="field">Növ<select name="nov">${[['yag', 'Yağ'], ['filtr', 'Filtr'], ['diger', 'Digər']].map(([k, l]) => `<option value="${k}" ${x.nov === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="field">Özlülük<input name="ozluluk" value="${esc(x.ozluluk || '')}" placeholder="5W-30"></label>
+    </div>
+    <div class="grid2">
+      <label class="field">Tara<select name="tara">${tara.map(t => `<option ${x.tara === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+      <label class="field">Satış vahidi<select name="vahid">${[['qab', 'Qab / ədəd'], ['litr', 'Litr (boçka)']].map(([k, l]) => `<option value="${k}" ${x.vahid === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    </div>
+    <div class="grid2">
+      <label class="field">Tövsiyə qiymət (₼)<input name="tovsiye_qiymet" inputmode="decimal" value="${esc(x.tovsiye_qiymet ?? '')}" required></label>
+      <label class="field">Minimum qiymət (₼)<input name="min_qiymet" inputmode="decimal" value="${esc(x.min_qiymet ?? '')}" required></label>
+    </div>
+    <label class="field">Az qalma həddi<input name="min_qaliq" inputmode="decimal" value="${esc(x.min_qaliq ?? '')}" placeholder="məs. 3"></label>
+    <label class="row" style="font-size:14px"><input type="checkbox" name="aktiv" ${x.aktiv ? 'checked' : ''} style="width:22px;min-height:22px">Aktiv (ustalar görür)</label>
+    <button class="btn primary big" type="submit">Yadda saxla</button>
+  </form>`;
+};
+
+VIEWS.purchaseForm = (p) => `
+  ${backBtn()}<h1>Alış qeyd et</h1>
+  <form class="card" data-form="purchase">
+    <label class="field">Məhsul<select name="product_id" required><option value="">Seçin</option>${S.products.map(x => `<option value="${esc(x.product_id)}" ${p.product_id === x.product_id ? 'selected' : ''}>${esc(x.label)} (${esc(x.vahid)})</option>`).join('')}</select></label>
+    <div class="grid2">
+      <label class="field">Miqdar (qab və ya litr)<input name="miqdar" inputmode="decimal" required></label>
+      <label class="field">Vahid alış qiyməti (₼)<input name="vahid_alis_qiymeti" inputmode="decimal" required></label>
+    </div>
+    <div class="grid2">
+      <label class="field">Tarix<input type="date" name="tarix" value="${today()}"></label>
+      <label class="field">Təchizatçı<input name="techizatci"></label>
+    </div>
+    <label class="field">Qeyd<input name="qeyd"></label>
+    <button class="btn primary big" type="submit">Yadda saxla</button>
+  </form>`;
+
+VIEWS.purchaseList = async () => {
+  const list = await api('purchases');
+  return `${backBtn()}<h1>Son alışlar</h1>
+  <div class="card scroll">${list.length ? `<table><tr><th>Tarix</th><th>Məhsul</th><th class="r">Miqdar</th><th class="r">Qiymət</th><th class="r">Cəmi</th></tr>
+  ${list.map(b => `<tr><td>${fmtDate(b.tarix)}</td><td>${esc(b.mehsul)}${b.techizatci ? '<br><span class="muted">' + esc(b.techizatci) + '</span>' : ''}</td><td class="r">${b.miqdar}</td><td class="r">${money(b.qiymet)}</td><td class="r">${money(b.cemi)}</td></tr>`).join('')}</table>` : '<div class="empty">Alış yoxdur.</div>'}</div>`;
+};
+
+// ------------------------------------------------------------- Admin: Daha
+VIEWS.more = () => `
+  <div><div class="muted">${esc(S.user.telefon)}</div><h1>${esc(S.user.ad)}</h1></div>
+  <div class="list">
+    <button class="item" data-act="go" data-v="users">${ic('user')}<span class="grow"><span>İstifadəçilər və rollar</span><span class="muted">Usta əlavə et, kassa icazəsi, PIN</span></span></button>
+    <button class="item" data-act="go" data-v="cars">${ic('car')}<span class="grow"><span>Maşınlar</span><span class="muted">Axtarış və tarixçə</span></span></button>
+    <button class="item" data-act="go" data-v="settings">${ic('more')}<span class="grow"><span>Parametrlər</span><span class="muted">Servis adı, qəbz, km intervalı</span></span></button>
+    <button class="item" data-act="toChangePin">${ic('user')}<span class="grow"><span>PIN-i dəyiş</span></span></button>
+  </div>
+  <button class="btn danger" data-act="logout">Çıxış</button>`;
+
+VIEWS.users = async () => {
+  const list = await api('users');
+  return `${backBtn()}
+  <div class="between"><h1>İstifadəçilər</h1><button class="btn small primary" data-act="newUser">${ic('plus', 18)}Yeni</button></div>
+  <div class="list">${list.map(u => `
+    <button class="item" data-act="editUser" data-json="${esc(JSON.stringify(u))}">
+      <span class="grow"><span>${esc(u.ad)}${u.aktiv ? '' : ' (deaktiv)'}</span><span class="muted">${esc(u.telefon)} · ${u.rol === 'admin' ? 'Admin' : 'Usta'}${u.rol !== 'admin' && u.kassa ? ' · kassa icazəsi' : ''}</span></span>
+    </button>`).join('')}</div>`;
+};
+
+VIEWS.userForm = (p) => {
+  const u = p.user || { rol: 'usta', aktiv: true, kassa: false };
+  return `${backBtn()}<h1>${u.id ? 'İstifadəçini düzəlt' : 'Yeni istifadəçi'}</h1>
+  <form class="card" data-form="user">
+    <input type="hidden" name="id" value="${esc(u.id || '')}">
+    <label class="field">Ad, soyad<input name="ad" value="${esc(u.ad || '')}" required autofocus></label>
+    <label class="field">Telefon (giriş üçün)<input name="telefon" type="tel" inputmode="tel" value="${esc(u.telefon || '')}" required></label>
+    <label class="field">Rol<select name="rol"><option value="usta" ${u.rol !== 'admin' ? 'selected' : ''}>Usta</option><option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Admin</option></select></label>
+    <label class="row" style="font-size:14px"><input type="checkbox" name="kassa" ${u.kassa ? 'checked' : ''} style="width:22px;min-height:22px">Kassanı görə bilər (yalnız bu gün)</label>
+    <label class="row" style="font-size:14px"><input type="checkbox" name="aktiv" ${u.aktiv ? 'checked' : ''} style="width:22px;min-height:22px">Aktiv</label>
+    <button class="btn primary big" type="submit">Yadda saxla</button>
+  </form>
+  ${u.id ? `<button class="btn" data-act="resetPin" data-id="${esc(u.id)}">Yeni PIN ver</button>` : '<span class="muted">Yadda saxladıqdan sonra ilk PIN ekranda göstəriləcək — ustaya verin.</span>'}`;
+};
+
+VIEWS.settings = () => {
+  const s = S.settings;
+  return `${backBtn()}<h1>Parametrlər</h1>
+  <form class="card" data-form="settings">
+    <label class="field">Servis adı<input name="servis_adi" value="${esc(s.servis_adi || '')}"></label>
+    <label class="field">Ünvan<input name="unvan" value="${esc(s.unvan || '')}"></label>
+    <label class="field">Telefon<input name="telefon" value="${esc(s.telefon || '')}"></label>
+    <label class="field">Qəbzin alt qeydi<input name="alt_qeyd" value="${esc(s.alt_qeyd || '')}"></label>
+    <label class="field">Yağ dəyişmə intervalı (km)<input name="interval_km" inputmode="numeric" value="${esc(s.interval_km || '10000')}"></label>
+    <button class="btn primary big" type="submit">Yadda saxla</button>
+  </form>`;
+};
+
+VIEWS.pinShow = (p) => `
+  <h1>PIN</h1>
+  <div class="card"><span class="muted">${esc(p.ad)} üçün ilk PIN:</span><div class="big" style="letter-spacing:6px">${esc(p.pin)}</div>
+  <span class="muted">Bu PIN yalnız indi görünür. Ustaya verin — ilk girişdə öz PIN-ini təyin edəcək.</span></div>
+  <button class="btn primary big" data-act="go" data-v="users">Hazırdır</button>`;
+
+// ------------------------------------------------------------- Hadisələr
+const formData = f => Object.fromEntries(new FormData(f).entries());
+
+$app.addEventListener('submit', e => {
+  const f = e.target, type = f.dataset.form;
+  if (!type) return;
+  e.preventDefault();
+  const d = formData(f);
+  run(async () => {
+    switch (type) {
+      case 'login': {
+        const r = await api('login', { phone: d.phone, pin: d.pin });
+        S.token = r.token; S.user = r.user; localStorage.setItem('token', r.token);
+        S.loginPin = d.pin;
+        if (r.mustChange) return go('changePin', {}, false);
+        return tab('home');
+      }
+      case 'changePin': {
+        if (d.newPin !== d.newPin2) throw new Error('Yeni PIN-lər eyni deyil');
+        await api('changePin', { oldPin: d.oldPin, newPin: d.newPin });
+        toast('PIN dəyişdirildi', true); return tab('home');
+      }
+      case 'carSearch': return go('cars', { q: d.q, pick: f.dataset.pick === '1' }, S.view !== 'cars');
+      case 'car': {
+        const car = await api('saveCar', { car: d });
+        if (f.dataset.pick === '1') { pickCarObj(car); return; }
+        S.history.pop(); return go('carHistory', { car_id: car.car_id }, false);
+      }
+      case 'cashMove': await api('addCashMove', { nov: d.nov, mebleg: d.mebleg, sebeb: d.sebeb }); toast('Əlavə olundu', true); return render();
+      case 'closeDay': {
+        if (!confirm(`Faktiki nağd: ${money(d.faktiki)}. Kassanı bağlayaq?`)) return;
+        const k = await api('closeDay', { faktiki: d.faktiki });
+        toast(`Gün bağlandı. Fərq: ${money(k.ferq)}`, true); return render();
+      }
+      case 'range': return go('report', { from: d.from, to: d.to, preset: 'x' }, false);
+      case 'product': {
+        d.aktiv = !!f.aktiv.checked;
+        await api('saveProduct', { product: d }); toast('Yadda saxlanıldı', true); return back();
+      }
+      case 'purchase': await api('savePurchase', { purchase: d }); toast('Alış qeyd olundu', true); return back();
+      case 'user': {
+        const u = { ...d, kassa: !!f.kassa.checked, aktiv: !!f.aktiv.checked };
+        const r = await api('saveUser', { user: u });
+        if (r.pin) return go('pinShow', { pin: r.pin, ad: u.ad }, false);
+        toast('Yadda saxlanıldı', true); return back();
+      }
+      case 'settings': S.settings = await api('saveSettings', { settings: d }); toast('Yadda saxlanıldı', true); return back();
+    }
+  });
+});
+
+function pickCarObj(car) {
+  const d = jobDraft(); d.car = car;
+  S.history = S.history.filter(h => h.view !== 'cars' && h.view !== 'carForm');
+  const last = S.history[S.history.length - 1];
+  if (last && last.view === 'job') S.history.pop();
+  go('job', {}, false);
+}
+
+$app.addEventListener('click', e => {
+  const t = e.target.closest('[data-act],[data-tab],[data-pay],[data-preset],[data-movetype]');
+  if (!t) return;
+  if (t.dataset.tab) { if (t.dataset.tab === 'home') S.boot = null; return tab(t.dataset.tab); }
+  if (t.dataset.pay) { const d = jobDraft(); d.pay = t.dataset.pay; return render(); }
+  if (t.dataset.preset) { return go(t.dataset.view === 'home' && isAdmin() ? 'report' : t.dataset.view, { preset: t.dataset.preset }, false); }
+  if (t.dataset.movetype) {
+    t.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === t));
+    t.form.nov.value = t.dataset.movetype; return;
+  }
+  const a = t.dataset.act, id = t.dataset.id;
+  run(async () => {
+    switch (a) {
+      case 'retry': return render();
+      case 'back': if (S.view === 'job' && !confirm('İş yadda saxlanmayıb. Çıxaq?')) return; if (S.view === 'job') S.draft = null; return back();
+      case 'home': S.draft = null; S.boot = null; return tab('home');
+      case 'go': return go(t.dataset.v);
+      case 'logout': return logout();
+      case 'toChangePin': return go('changePin');
+      case 'newJob': S.draft = null; jobDraft(); return go('cars', { pick: true });
+      case 'jobForCar': S.draft = null; jobDraft().car = S.params.car; return go('job');
+      case 'changeCar': return go('cars', { pick: true });
+      case 'openCar': return go('carHistory', { car_id: id });
+      case 'pickCar': { const list = await api('searchCars', { q: '' }, true); let car = list.find(c => c.car_id === id); if (!car) car = (await api('carHistory', { car_id: id })).car; return pickCarObj(car); }
+      case 'newCar': { const q = $app.querySelector('[data-form="carSearch"] input'); return go('carForm', { pick: t.dataset.pick === '1', q: q ? q.value : '' }); }
+      case 'editCar': return go('carForm', { car: S.params.car });
+      case 'addRepair': jobDraft().items.push({ nov: 'temir', ad: '', qiymet: '' }); return render();
+      case 'delItem': jobDraft().items.splice(+t.dataset.ix, 1); return render();
+      case 'saveJob': return saveJob();
+      case 'openReceipt': return go('receipt', { job_id: id });
+      case 'whatsapp': { const r = S.params.data; const ph = waPhone(r.car.telefon); window.open(`https://wa.me/${ph}?text=${encodeURIComponent(receiptText(r))}`, '_blank'); return; }
+      case 'cancelJob': {
+        const why = prompt('İşi ləğv etmək səbəbi:'); if (why === null) return;
+        await api('cancelJob', { job_id: S.params.data.job.job_id, sebeb: why }); toast('İş ləğv edildi', true); S.boot = null; return tab('home');
+      }
+      case 'kassaHistory': return go('kassaHistory');
+      case 'payUsta': {
+        const v = prompt(`${t.dataset.name} ustaya ödənən nağd məbləğ (₼):`, t.dataset.amt); if (v === null) return;
+        await api('addCashMove', { nov: 'usta_odenisi', mebleg: v, alan_user_id: id, sebeb: 'Usta haqqı + təmir' }); toast('Ödəniş qeyd olundu', true); return render();
+      }
+      case 'editMove': {
+        const v = prompt('Yeni məbləğ (₼):', t.dataset.amt); if (v === null) return;
+        const why = prompt('Düzəlişin səbəbi:'); if (!why) return;
+        await api('editCashMove', { move_id: id, mebleg: v, sebeb: why }); toast('Düzəldildi', true); return render();
+      }
+      case 'editDay': {
+        const v = prompt('Faktiki nağd məbləğ (₼):', t.dataset.amt); if (v === null) return;
+        const why = prompt('Düzəlişin səbəbi:'); if (!why) return;
+        const [from, to] = S.params.range;
+        await api('editCashDay', { day_id: id, faktiki: v, sebeb: why, from, to }); toast('Düzəldildi, sonrakı günlər yenidən hesablandı', true); return render();
+      }
+      case 'newProduct': return go('productForm', {});
+      case 'editProduct': return go('productForm', { product: S.products.find(p => p.product_id === id) });
+      case 'newPurchase': return go('purchaseForm', {});
+      case 'purchaseList': return go('purchaseList');
+      case 'newUser': return go('userForm', {});
+      case 'editUser': return go('userForm', { user: JSON.parse(t.dataset.json) });
+      case 'resetPin': { if (!confirm('Yeni PIN verilsin? Köhnə PIN işləməyəcək.')) return; const r = await api('resetPin', { id }); return go('pinShow', { pin: r.pin, ad: '' }, false); }
+    }
+  });
+});
+
+$app.addEventListener('input', e => {
+  const el = e.target;
+  if (S.view !== 'job') return;
+  const d = jobDraft();
+  if (el.dataset.bind) { d[el.dataset.bind] = el.value; if (el.dataset.bind === 'usta_haqqi') refreshTotals(); }
+  if (el.dataset.item !== undefined) {
+    const it = d.items[+el.dataset.item]; it[el.dataset.f] = el.value; refreshTotals();
+    if (it.nov === 'mal') {
+      const p = S.products.find(x => x.product_id === it.product_id) || {};
+      const h = $app.querySelector(`[data-hint="${el.dataset.item}"]`);
+      if (h) h.innerHTML = `Tövsiyə ${money(p.tovsiye_qiymet)} · minimum ${money(p.min_qiymet)}${num(it.qiymet) < num(p.min_qiymet) ? ' — <b style="color:var(--danger)">minimumdan aşağıdır</b>' : ''}`;
+    }
+  }
+});
+
+$app.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.new === 'product' && el.value) {
+    const p = S.products.find(x => x.product_id === el.value);
+    jobDraft().items.push({ nov: 'mal', product_id: p.product_id, ad: p.label, miqdar: p.vahid === 'litr' ? '4' : '1', qiymet: String(p.tovsiye_qiymet) });
+    render();
+  }
+  if (el.dataset.bind === 'km') render();
+});
+
+async function saveJob() {
+  const d = jobDraft();
+  if (!d.car) throw new Error('Maşın seçin');
+  if (!num(d.km)) throw new Error('Km yazın');
+  const t = jobTotals(d);
+  for (const it of d.items) {
+    if (it.nov === 'mal') {
+      const p = S.products.find(x => x.product_id === it.product_id) || {};
+      if (num(it.qiymet) < num(p.min_qiymet)) throw new Error(`${p.label}: qiymət minimumdan (${money(p.min_qiymet)}) aşağı ola bilməz`);
+    }
+    if (it.nov === 'temir' && !String(it.ad).trim()) throw new Error('Təmir işinin adını yazın');
+  }
+  let nagd = 0, kart = 0;
+  if (d.pay === 'nagd') nagd = t.umumi; else if (d.pay === 'kart') kart = t.umumi;
+  else { nagd = num(d.nagd); kart = num(d.kart); if (Math.abs(nagd + kart - t.umumi) > 0.009) throw new Error(`Nağd + kart ${money(t.umumi)} olmalıdır`); }
+  const job = { car_id: d.car.car_id, km: d.km, usta_haqqi: d.usta_haqqi, nagd, kart, novbeti_km: d.novbeti_km, qeyd: d.qeyd,
+    items: d.items.map(i => ({ nov: i.nov, product_id: i.product_id, ad: i.ad, miqdar: i.miqdar, qiymet: i.qiymet })) };
+  const r = await api('saveJob', { job });
+  S.draft = null; S.boot = null; S.products = [];
+  S.history = [];
+  go('receipt', { data: r, fresh: true }, false);
+}
+
+// ------------------------------------------------------------- Start
+(async function start() {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (!S.token) { S.view = 'login'; return render(); }
+  try {
+    const b = await api('bootstrap');
+    S.user = b.user; S.settings = b.settings; S.products = b.products; S.boot = isAdmin() ? null : b;
+    S.view = 'home'; render();
+  } catch (e) { if (S.token) { S.view = 'home'; render(); } else render(); }
+})();
+</script>
+</body>
+</html>
