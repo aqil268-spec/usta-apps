@@ -355,7 +355,8 @@ VIEWS.linkNew = (p) => {
 
 const linkStatus = l => ({ tesdiq: '<span class="pill ok">Təsdiq edildi</span>', redd: '<span class="pill bad">Rədd edildi</span>' }[l.status] || '');
 VIEWS.carLinks = async () => {
-  const r = await api('carLinks', {}, true);
+  // Keşdən dərhal göstərilir, yenisi arxada yüklənir; ilk dəfə yüklənmə işarəsi görünür
+  const r = await cget('carLinks');
   const hrs = ms => Math.max(0, Math.round((ms - Date.now()) / 3600000));
   return `<div class="between"><h1>Maşın kartı linkləri</h1><button class="btn small primary" data-act="go" data-v="linkNew">${ic('link', 18)}Yeni link</button></div>
   <h2>Doldurulub — təsdiq gözləyir</h2>
@@ -1103,10 +1104,15 @@ VIEWS.more = async () => {
   <button class="btn danger" data-act="logout">Çıxış</button>`;
 };
 
-const shortDT = s => s ? (s.slice(0, 10) === today() ? s.slice(11) : fmtDate(s.slice(0, 10)).slice(0, 5) + ' ' + s.slice(11)) : '';
-const activityText = u => u.indi ? `İndi aktiv · ${u.cihaz} cihaz` : u.cihaz ? `Girişli · ${u.cihaz} cihaz · son aktivlik ${shortDT(u.son_aktivlik)}` : (u.son_aktivlik ? `Çıxış edib · son aktivlik ${shortDT(u.son_aktivlik)}` : 'Hələ daxil olmayıb');
+const fullDT = s => s ? fmtDate(s.slice(0, 10)) + ' ' + s.slice(11, 16) : '';
+// Aktiv deyilsə: son giriş tarixi göstərilir (yoxdursa, son aktivlik)
+const activityText = u => {
+  if (u.indi) return `İndi aktiv · ${u.cihaz} cihaz`;
+  const last = u.son_giris ? `Son giriş: ${fullDT(u.son_giris)}` : (u.son_aktivlik ? `Son aktivlik: ${fullDT(u.son_aktivlik)}` : 'Hələ daxil olmayıb');
+  return u.cihaz ? `${last} · girişli, ${u.cihaz} cihaz` : last;
+};
 VIEWS.users = async () => {
-  const list = await api('users', {}, true);
+  const list = await cget('users');
   const on = list.filter(u => u.indi).length;
   return `<div class="between"><h1>İstifadəçilər</h1><button class="btn small primary" data-act="newUser">${ic('plus', 18)}Yeni</button></div>
   <div class="muted">İndi aktiv: <b style="color:var(--text)">${on}</b> · Girişli: <b style="color:var(--text)">${list.filter(u => u.cihaz).length}</b> · Ustaların girişi hər gün 00:00-da bitir.</div>
@@ -1131,7 +1137,7 @@ VIEWS.userForm = (p) => {
     <label class="row" style="font-size:14px"><input type="checkbox" name="aktiv" ${u.aktiv ? 'checked' : ''} style="width:22px;min-height:22px">Aktiv</label>
     <button class="btn primary big" type="submit">Yadda saxla</button>
   </form>
-  ${u.id ? `<div class="card"><span class="muted">${activityText(u)}${u.son_giris ? ' · son giriş ' + shortDT(u.son_giris) : ''}</span>
+  ${u.id ? `<div class="card"><span class="muted">${activityText(u)}${u.indi && u.son_giris ? ' · son giriş ' + fullDT(u.son_giris) : ''}</span>
     <button class="btn" data-act="resetPin" data-id="${esc(u.id)}">Müvəqqəti şifrə ver</button>
     ${u.cihaz && u.id !== S.user.id ? `<button class="btn" data-act="forceLogout" data-id="${esc(u.id)}">Çıxış etdir (bütün cihazlar)</button>` : ''}</div>` : '<span class="muted">Yadda saxladıqdan sonra müvəqqəti şifrə ekranda göstəriləcək.</span>'}`;
 };
