@@ -1,5 +1,5 @@
 // Sadə service worker: ekran fayllarını keşləyir, API sorğularına toxunmur.
-const CACHE = 'aqqa-v5';
+const CACHE = 'aqqa-v6';
 const FILES = ['./', './index.html', './config.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
