@@ -104,6 +104,18 @@ const I = {
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   share: '<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14"/>'
 };
+// Loqo: narıncı kvadratda yağ damcısı + açar (yağ dəyişmə və təmir)
+const logoMark = (s = 44) => `<svg width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true">
+  <rect width="48" height="48" rx="12" fill="#F2994A"/>
+  <path d="M24 9c0 0 9.5 10.3 9.5 17.6a9.5 9.5 0 0 1-19 0C14.5 19.3 24 9 24 9z" fill="#141413"/>
+  <path d="M27.6 24.2a3.6 3.6 0 0 1-4.6 4.6l-3.7 3.7a1.3 1.3 0 0 1-1.8-1.8l3.7-3.7a3.6 3.6 0 0 1 4.6-4.6l-2 2 .4 1.4 1.4.4z" fill="#F2994A"/>
+</svg>`;
+const logoFull = (name, light) => `<div style="display:flex;align-items:center;gap:10px;justify-content:center">
+  ${logoMark(40)}
+  <div style="display:flex;flex-direction:column;line-height:1;text-align:left">
+    <span style="font-size:20px;font-weight:700;letter-spacing:.04em;color:${light ? '#141413' : 'var(--text)'}">${esc(String(name || 'AQQA Servis').split(' ')[0].toUpperCase())}</span>
+    <span style="font-size:10px;letter-spacing:.32em;color:${light ? '#5E5A50' : 'var(--muted)'};margin-top:4px">${esc((String(name || 'AQQA Servis').split(' ').slice(1).join(' ') || 'SERVİS').toLocaleUpperCase('az'))}</span>
+  </div></div>`;
 const ic = (n, s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const grp = (v, dec) => { const n = Math.round((Number(v) || 0) * 100) / 100; const [i, f] = Math.abs(n).toFixed(dec).split('.'); const s = i.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0'); return (n < 0 ? '−' : '') + s + (f && +f ? ',' + f : ''); };
@@ -149,18 +161,34 @@ function prefetch(action, body = {}) { const k = swrKey(action, body); if (!(k i
 async function api(action, body = {}, quiet) {
   if (!API || API.indexOf('http') !== 0) throw new Error('config.js-də API_URL yazılmayıb');
   if (!quiet) loading(true);
+  const payload = { action, token: S.token, ...body };
+  // Yazı əməliyyatına unikal nömrə: təkrar cəhd ikinci dəfə yazmasın
+  if (WRITES.includes(action)) payload.rid = (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random());
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
   try {
-    const res = await fetch(API, { method: 'POST', body: JSON.stringify({ action, token: S.token, ...body }) });
-    const j = await res.json();
-    if (!j.ok) {
-      if (j.auth) { logout(); }
-      throw new Error(j.error || 'Xəta');
+    let lastErr = null;
+    // Google bəzən JSON əvəzinə HTML xəta səhifəsi qaytarır — 3 dəfəyə qədər yenidən cəhd et
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt) await sleep(700 * attempt);
+      let txt;
+      try {
+        const res = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
+        txt = await res.text();
+      } catch (e) { lastErr = new Error('İnternet bağlantısını yoxlayın'); continue; }
+      let j;
+      try { j = JSON.parse(txt); } catch (e) {
+        const title = (txt.match(/<title>([^<]*)<\/title>/i) || [])[1];
+        lastErr = new Error('Server müvəqqəti cavab vermədi' + (title ? ' (' + title.trim() + ')' : '') + '. Bir az sonra yenidən cəhd edin.');
+        continue;
+      }
+      if (!j.ok) {
+        if (j.auth) { logout(); }
+        throw new Error(j.error || 'Xəta');
+      }
+      if (WRITES.includes(action)) { MEM = {}; persist(); }
+      return j.data;
     }
-    if (WRITES.includes(action)) { MEM = {}; persist(); }
-    return j.data;
-  } catch (e) {
-    if (e instanceof TypeError) throw new Error('İnternet bağlantısını yoxlayın');
-    throw e;
+    throw lastErr;
   } finally { if (!quiet) loading(false); }
 }
 
@@ -213,7 +241,7 @@ const backBtn = (t = 'Geri') => `<button class="back" data-act="back">${ic('back
 // ------------------------------------------------------------- Giriş
 VIEWS.login = () => `
   <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px">
-    <div><div class="muted">Xoş gəlmisiniz</div><h1>${esc(S.settings.servis_adi || 'AQQA Servis')}</h1></div>
+    <div style="display:flex;flex-direction:column;gap:16px;align-items:flex-start">${logoFull(S.settings.servis_adi)}<div class="muted">Xoş gəlmisiniz, daxil olun</div></div>
     <form class="card" data-form="login">
       <label class="field">Telefon<input name="phone" type="tel" inputmode="tel" placeholder="050 000 00 00" autocomplete="username" required autofocus></label>
       <label class="field">PIN<input name="pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" autocomplete="current-password" required></label>
@@ -418,6 +446,40 @@ function refreshTotals() {
 }
 
 // ------------------------------------------------------------- Qəbz
+// ---- PDF qəbz: ekrandakı qəbzi şəkil kimi çəkib PDF-ə qoyur (Azərbaycan hərfləri olduğu kimi qalır)
+function loadScript(src) {
+  return new Promise((ok, bad) => {
+    if (document.querySelector(`script[src="${src}"]`)) return window.jspdf && window.html2canvas ? ok() : setTimeout(ok, 300);
+    const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => bad(new Error('PDF hazırlanmadı: internet bağlantısını yoxlayın')); document.head.appendChild(s);
+  });
+}
+async function buildPdf(r) {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const el = $app.querySelector('.receipt');
+  if (!el) throw new Error('Qəbz tapılmadı');
+  const canvas = await window.html2canvas(el, { scale: 2, backgroundColor: '#FAF9F5', useCORS: true });
+  const { jsPDF } = window.jspdf;
+  const w = 80, h = canvas.height * w / canvas.width; // 80 mm — çek eni
+  const pdf = new jsPDF({ unit: 'mm', format: [w + 8, h + 8] });
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 4, 4, w, h);
+  pdf.setProperties({ title: `Qəbz №${r.job.qebz}` });
+  return new File([pdf.output('blob')], `Qebz-${r.job.qebz}-${String(r.car.nomre || '').replace(/[^A-Za-z0-9]/g, '')}.pdf`, { type: 'application/pdf' });
+}
+async function sharePdf() {
+  const r = S.params.data;
+  let file = S.pdf ? await S.pdf : null;
+  if (!file) file = await (S.pdf = buildPdf(r));
+  const text = `${r.settings.servis_adi} · Qəbz №${r.job.qebz} · ${money(r.job.umumi)}`;
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: `Qəbz №${r.job.qebz}`, text }); }
+    catch (e) { if (e.name !== 'AbortError') throw new Error('Paylaşmaq alınmadı, yenidən basın'); }
+    return;
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; a.click();
+  toast('PDF yükləndi. WhatsApp-da fayl kimi əlavə edin.', true);
+}
+
 VIEWS.receipt = async (p) => {
   const r = p.data || await cget('receipt', { job_id: p.job_id });
   S.params.data = r;
@@ -427,7 +489,7 @@ VIEWS.receipt = async (p) => {
   return `
   ${p.fresh ? `<div class="between"><button class="back" data-act="home">${ic('back', 18)}Əsasa qayıt</button><span class="pill ok">Yadda saxlanıldı</span></div>` : backBtn()}
   <div class="receipt">
-    <div style="text-align:center"><b style="font-size:17px">${esc(s.servis_adi)}</b><div class="muted">${esc([s.unvan, s.telefon].filter(Boolean).join(' · '))}</div></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px">${logoFull(s.servis_adi, true)}<div class="muted" style="text-align:center">${esc([s.unvan, s.telefon].filter(Boolean).join(' · '))}</div></div>
     <div class="line muted"><span>Qəbz №${esc(j.qebz)}</span><span>${fmtDate(j.tarix_saat.slice(0, 10))} ${esc(j.tarix_saat.slice(11))}</span></div>
     ${j.status === 'legv' ? '<b style="color:#B42318;text-align:center">LƏĞV EDİLİB</b>' : ''}
     <hr>
@@ -446,9 +508,12 @@ VIEWS.receipt = async (p) => {
     ${r.tarixce.length ? `<hr><b>Son xidmətlər</b>${r.tarixce.map(x => `<div class="line muted"><span>${fmtDate(x.tarix)} · ${kmf(x.km)}</span><span style="text-align:right">${esc(x.xulase)}</span></div>`).join('')}` : ''}
     ${s.alt_qeyd ? `<div style="text-align:center;margin-top:6px">${esc(s.alt_qeyd)}</div>` : ''}
   </div>
-  <button class="btn primary big" data-act="whatsapp">${ic('share')}WhatsApp-da paylaş</button>
+  <button class="btn primary big" data-act="sharePdf">${ic('share')}Qəbzi PDF kimi göndər</button>
+  <button class="btn" data-act="whatsapp">WhatsApp-a mətn kimi göndər</button>
   ${canCancel ? `<button class="btn danger" data-act="cancelJob">İşi ləğv et</button>` : ''}`;
 };
+
+VIEWS.receipt.after = () => { S.pdf = null; setTimeout(() => { if (S.view === 'receipt' && S.params.data) S.pdf = buildPdf(S.params.data).catch(() => (S.pdf = null)); }, 400); };
 
 const payText = j => j.kart && j.nagd ? `Nağd ${money(j.nagd)}, kart ${money(j.kart)}` : j.kart ? 'Kart' : 'Nağd';
 
@@ -810,6 +875,7 @@ $app.addEventListener('click', e => {
       case 'delItem': jobDraft().items.splice(+t.dataset.ix, 1); return render();
       case 'saveJob': return saveJob();
       case 'openReceipt': return go('receipt', { job_id: id });
+      case 'sharePdf': return sharePdf();
       case 'whatsapp': { const r = S.params.data; const ph = waPhone(r.car.telefon); window.open(`https://wa.me/${ph}?text=${encodeURIComponent(receiptText(r))}`, '_blank'); return; }
       case 'cancelJob': {
         const why = prompt('İşi ləğv etmək səbəbi:'); if (why === null) return;
