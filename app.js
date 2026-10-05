@@ -18,6 +18,7 @@ const I = {
   wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   check: '<path d="M5 12l5 5L20 7"/>',
+  dot: '<circle cx="12" cy="12" r="4"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   share: '<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14"/>',
   bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
@@ -201,19 +202,38 @@ VIEWS.login = () => `
     <div style="display:flex;flex-direction:column;gap:16px;align-items:flex-start">${logoFull(S.settings.servis_adi)}<div class="muted">Xoş gəlmisiniz, daxil olun</div></div>
     <form class="card" data-form="login">
       <label class="field">Telefon<input name="phone" type="tel" inputmode="tel" placeholder="050 000 00 00" autocomplete="username" required autofocus></label>
-      <label class="field">PIN<input name="pin" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" autocomplete="current-password" required></label>
+      <label class="field">Şifrə<input name="pin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required></label>
+      ${showPwd()}
       <button class="btn primary big" type="submit">Daxil ol</button>
     </form>
   </div>`;
 
+// Şifrə qaydası (serverdəki weakPin_ ilə eynidir)
+const PWD_RULES = [
+  ['ən az 8 simvol', p => p.length >= 8],
+  ['1 böyük hərf (A–Z)', p => /\p{Lu}/u.test(p)],
+  ['1 kiçik hərf (a–z)', p => /\p{Ll}/u.test(p)],
+  ['1 rəqəm (0–9)', p => /\d/.test(p)],
+  ['1 işarə (məs. ! @ # - _)', p => /[^\p{L}\p{N}\s]/u.test(p)]
+];
+const pwdOk = p => PWD_RULES.every(r => r[1](p)) && !/\s/.test(p) && p.length <= 64;
+const pwdRulesHtml = (p = '', p2 = '') => PWD_RULES.map(([t, f]) => `<li class="${f(p) ? 'ok' : ''}">${ic(f(p) ? 'check' : 'dot', 14)}${t}</li>`).join('')
+  + `<li class="${p && p === p2 ? 'ok' : ''}">${ic(p && p === p2 ? 'check' : 'dot', 14)}iki şifrə eynidir</li>`;
+const showPwd = () => `<label class="row muted" style="gap:10px;font-size:14px"><input type="checkbox" data-showpwd style="width:20px;min-height:20px;height:20px">Şifrəni göstər</label>`;
+
 VIEWS.changePin = () => `
-  <h1>PIN-i dəyişin</h1>
-  <p class="muted" style="margin:0">Verilmiş PIN-i öz PIN-inizlə əvəz edin (${isAdmin() ? '6 rəqəm' : '4–6 rəqəm'}). 1234, 1111 kimi asan PIN olmaz.</p>
+  <h1>Yeni şifrə təyin edin</h1>
+  <div class="banner info" role="note">
+    <b>Şifrədə bunlar olmalıdır:</b>
+    <ul class="rules" data-rules>${pwdRulesHtml()}</ul>
+    <span>Nümunə: <b>Usta-2026!</b> (bu nümunəni işlətməyin, özünüzünkünü yazın)</span>
+  </div>
   <form class="card" data-form="changePin">
-    <label class="field">Hazırkı PIN<input name="oldPin" type="password" inputmode="numeric" required autofocus></label>
-    <label class="field">Yeni PIN<input name="newPin" type="password" inputmode="numeric" pattern="${isAdmin() ? '[0-9]{6}' : '[0-9]{4,6}'}" maxlength="6" required></label>
-    <label class="field">Yeni PIN təkrar<input name="newPin2" type="password" inputmode="numeric" required></label>
-    <button class="btn primary big" type="submit">Yadda saxla</button>
+    <label class="field">Hazırkı şifrə<input name="oldPin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required autofocus></label>
+    <label class="field">Yeni şifrə<input name="newPin" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="64" required></label>
+    <label class="field">Yeni şifrə təkrar<input name="newPin2" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="64" required></label>
+    ${showPwd()}
+    <button class="btn primary big" type="submit" data-pwdsave disabled>Yadda saxla</button>
   </form>`;
 
 // ------------------------------------------------------------- Usta: Əsas
@@ -570,7 +590,7 @@ VIEWS.me = async (p) => {
     <span class="muted">Gözləyən usta haqqı müştəri borcu ödəyəndə hesablanır.</span>
   </div>
   <button class="item" data-act="myDebts"><span class="grow"><span>Ödənilməyən işlər</span><span class="muted">Müştəri borcları</span></span><b style="color:${s.borc ? 'var(--danger)' : 'inherit'}">${money(s.borc)}</b></button>
-  <button class="btn" data-act="toChangePin">PIN-i dəyiş</button>
+  <button class="btn" data-act="toChangePin">Şifrəni dəyiş</button>
   <button class="btn danger" data-act="logout">Çıxış</button>`;
 };
 
@@ -930,7 +950,7 @@ VIEWS.more = async () => {
     ${item('cars', 'car', 'Maşınlar', 'Axtarış və tarixçə')}
     ${item('settings', 'gear', 'Parametrlər', 'Servis, qəbz, interval, xatırlatma')}
   </div>
-  <button class="btn" data-act="toChangePin">PIN-i dəyiş</button>
+  <button class="btn" data-act="toChangePin">Şifrəni dəyiş</button>
   <button class="btn danger" data-act="logout">Çıxış</button>`;
 };
 
@@ -956,7 +976,7 @@ VIEWS.userForm = (p) => {
     <label class="row" style="font-size:14px"><input type="checkbox" name="aktiv" ${u.aktiv ? 'checked' : ''} style="width:22px;min-height:22px">Aktiv</label>
     <button class="btn primary big" type="submit">Yadda saxla</button>
   </form>
-  ${u.id ? `<button class="btn" data-act="resetPin" data-id="${esc(u.id)}">Yeni PIN ver</button>` : '<span class="muted">Yadda saxladıqdan sonra ilk PIN ekranda göstəriləcək.</span>'}`;
+  ${u.id ? `<button class="btn" data-act="resetPin" data-id="${esc(u.id)}">Müvəqqəti şifrə ver</button>` : '<span class="muted">Yadda saxladıqdan sonra müvəqqəti şifrə ekranda göstəriləcək.</span>'}`;
 };
 
 VIEWS.settings = () => {
@@ -979,9 +999,9 @@ VIEWS.settings = () => {
 };
 
 VIEWS.pinShow = (p) => `
-  <h1>PIN</h1>
-  <div class="card"><span class="muted">${esc(p.ad)} üçün PIN:</span><div class="big" style="letter-spacing:6px">${esc(p.pin)}</div>
-  <span class="muted">Bu PIN yalnız indi görünür. İstifadəçiyə verin — ilk girişdə öz PIN-ini təyin edəcək.</span></div>
+  <h1>Müvəqqəti şifrə</h1>
+  <div class="card"><span class="muted">${esc(p.ad)} üçün müvəqqəti şifrə:</span><div class="big" style="letter-spacing:3px;user-select:all">${esc(p.pin)}</div>
+  <span class="muted">Bu şifrə yalnız indi görünür. Böyük və kiçik hərflərə diqqət edin. İstifadəçiyə verin — ilk girişdə öz şifrəsini təyin edəcək.</span></div>
   <button class="btn primary big" data-act="pinDone">Hazırdır</button>`;
 
 // ------------------------------------------------------------- Hadisələr: formalar
@@ -1000,9 +1020,10 @@ $app.addEventListener('submit', e => {
         await loadBoot(true); setTimeout(warm, 1500); S.history = []; return go('home', {}, false);
       }
       case 'changePin': {
-        if (d.newPin !== d.newPin2) throw new Error('Yeni PIN-lər eyni deyil');
+        if (d.newPin !== d.newPin2) throw new Error('Yeni şifrələr eyni deyil');
+        if (!pwdOk(d.newPin)) throw new Error('Şifrə qaydaya uyğun deyil. Yuxarıdakı siyahıya baxın.');
         await api('changePin', { oldPin: d.oldPin, newPin: d.newPin });
-        toast('PIN dəyişdirildi', true); await loadBoot(true); S.history = []; return go('home', {}, false);
+        toast('Şifrə dəyişdirildi', true); await loadBoot(true); S.history = []; return go('home', {}, false);
       }
       case 'carSearch': return go('cars', { q: d.q, pick: f.dataset.pick === '1' }, S.view !== 'cars');
       case 'car': {
@@ -1091,7 +1112,7 @@ $app.addEventListener('click', e => {
       case 'back': if (S.history.length) history.back(); else goBack(); return;
       case 'home': S.draft = null; S.history = []; return go('home', {}, false);
       case 'go': return go(t.dataset.v);
-      case 'logout': if (!confirm('Çıxış edilsin? Növbəti dəfə PIN soruşulacaq.')) return; return logout(true);
+      case 'logout': if (!confirm('Çıxış edilsin? Növbəti dəfə şifrə soruşulacaq.')) return; return logout(true);
       case 'toChangePin': return go('changePin');
       case 'pinDone': S.history = S.history.filter(h => h.view !== 'userForm'); return go('users', {}, false);
       case 'newJob': S.draft = null; jobDraft(); return go('cars', { pick: true });
@@ -1156,7 +1177,7 @@ $app.addEventListener('click', e => {
       }
       case 'newUser': return go('userForm', {});
       case 'editUser': return go('userForm', { user: JSON.parse(t.dataset.json) });
-      case 'resetPin': { if (!confirm('Yeni PIN verilsin? Köhnə PIN və bütün girişlər bağlanacaq.')) return; const r = await api('resetPin', { id }); return go('pinShow', { pin: r.pin, ad: '' }, false); }
+      case 'resetPin': { if (!confirm('Müvəqqəti şifrə verilsin? Köhnə şifrə işləməyəcək və bütün girişlər bağlanacaq.')) return; const r = await api('resetPin', { id }); return go('pinShow', { pin: r.pin, ad: '' }, false); }
     }
   });
 });
@@ -1164,6 +1185,12 @@ $app.addEventListener('click', e => {
 // ------------------------------------------------------------- Hadisələr: yazma
 $app.addEventListener('input', e => {
   const el = e.target;
+  if (el.name === 'newPin' || el.name === 'newPin2') {
+    const f = el.form, p = f.newPin.value, p2 = f.newPin2.value, ul = $app.querySelector('[data-rules]');
+    if (ul) ul.innerHTML = pwdRulesHtml(p, p2);
+    const sb = f.querySelector('[data-pwdsave]'); if (sb) sb.disabled = !(pwdOk(p) && p === p2);
+    return;
+  }
   if (el.dataset.plate === '1') { const pos = el.value.length; el.value = plateFmt(el.value); return; }
   if (el.dataset.prodsearch !== undefined) {
     // Siyahıdan seçiləndə mal dərhal əlavə olunur
@@ -1220,6 +1247,7 @@ $app.addEventListener('input', e => {
 
 $app.addEventListener('change', e => {
   const el = e.target;
+  if (el.dataset.showpwd !== undefined) { el.form.querySelectorAll('input[name=pin],input[name=oldPin],input[name=newPin],input[name=newPin2]').forEach(i => { i.type = el.checked ? 'text' : 'password'; }); return; }
   if (el.dataset.autosubmit !== undefined && el.form) { el.form.requestSubmit(); return; }
   if (el.dataset.stamp !== undefined) { S.params.stamp = el.checked; return render(); }
   if (el.dataset.ferqli !== undefined) { const pl = el.form.nomre; pl.dataset.plate = el.checked ? '' : '1'; if (!el.checked) pl.value = plateFmt(pl.value); return; }
