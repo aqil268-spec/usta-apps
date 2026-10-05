@@ -44,7 +44,7 @@ const today = () => ymd(new Date());
 const fmtDate = s => s ? `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}` : '';
 const MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avqust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'];
 const DAYS = ['Bazar', 'Bazar ertəsi', 'Çərşənbə axşamı', 'Çərşənbə', 'Cümə axşamı', 'Cümə', 'Şənbə'];
-const longToday = () => { const d = new Date(); return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`; };
+const longToday = () => { const d = new Date(); if (LANG !== 'az') return d.toLocaleDateString(LANG === 'en' ? 'en-GB' : 'ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }); return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`; };
 const isAdmin = () => S.user && S.user.rol === 'admin';
 const NOV = { xerc: 'Xərc', usta_odenisi: 'Ustaya ödəniş', tehvil: 'Təhvil', duzelis: 'Düzəliş', techizatci: 'Təchizatçıya ödəniş' };
 const plateFmt = v => { const s = String(v || '').toUpperCase().replace(/[^0-9A-Z]/g, ''); let o = s.slice(0, 2); if (s.length > 2) o += '-' + s.slice(2, 4); if (s.length > 4) o += '-' + s.slice(4, 7); return o; };
@@ -58,7 +58,7 @@ function periods() {
 }
 
 // ------------------------------------------------------------- API + keş
-const WRITES = ['changePin', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
+const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
   'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings'];
 let MEM = {}; try { MEM = JSON.parse(localStorage.getItem('swr') || '{}'); } catch (e) { MEM = {}; }
 const persist = () => { try { localStorage.setItem('swr', JSON.stringify(MEM)); } catch (e) { MEM = {}; localStorage.removeItem('swr'); } };
@@ -94,7 +94,7 @@ async function api(action, body = {}, quiet) {
         continue;
       }
       if (!j.ok) {
-        if (j.auth) logout();
+        if (j.auth) { logout(false, j.error); const e = new Error(j.error || 'Xəta'); e.auth = true; throw e; }
         else if (j.mustChange && S.view !== 'changePin') { S.history = []; go('changePin', {}, false); }
         throw new Error(j.error || 'Xəta');
       }
@@ -112,7 +112,7 @@ function loading(on) {
 }
 function toast(msg, ok) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
-  const t = document.createElement('div'); t.className = 'toast' + (ok ? ' ok' : ''); t.setAttribute('role', 'status'); t.textContent = msg;
+  const t = document.createElement('div'); t.className = 'toast' + (ok ? ' ok' : ''); t.setAttribute('role', 'status'); t.textContent = tr(msg);
   document.body.appendChild(t); setTimeout(() => t.remove(), 3800);
 }
 async function run(fn) { try { await fn(); } catch (e) { toast(e.message); } }
@@ -148,27 +148,37 @@ window.addEventListener('popstate', () => {
   if (!S.history.length && ROOTS.includes(S.view)) return;
   if (!goBack()) history.pushState({ app: 1 }, '');
 });
-function logout(server) {
+function logout(server, why) {
   if (server && S.token) fetch(API, { method: 'POST', body: JSON.stringify({ action: 'logout', token: S.token }) }).catch(() => {});
   MEM = {}; localStorage.removeItem('swr'); localStorage.removeItem('token');
   S.token = ''; S.user = null; S.boot = null; S.cars = null; S.products = []; S.draft = null; S.history = []; S.view = 'login'; render();
+  if (why) setTimeout(() => toast(why), 50);
 }
 
 // ------------------------------------------------------------- Render
 const VIEWS = {};
+// Dil seçimi: yuxarı sağda, sakit rəngdə
+const langSelect = () => `<select class="lang" data-lang data-noi18n aria-label="Dil / Language / Язык">${LANGS.map(([k, l]) => `<option value="${k}" ${LANG === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+// Sistem pəncərələri də seçilmiş dildə
+const _confirm = window.confirm.bind(window), _prompt = window.prompt.bind(window);
+window.confirm = m => _confirm(tr(m));
+window.prompt = (m, d) => _prompt(tr(m), d);
+
 async function render() {
   if (!S.token) S.view = 'login';
   const v = VIEWS[S.view] || VIEWS.home;
   try {
     const html = await v(S.params);
     if (html === null) return;
-    const top = showBack() ? `<div class="topbar"><button class="icon-btn" data-act="back" aria-label="Geri">${ic('back', 20)}</button></div>` : '';
+    const top = `<div class="topbar">${showBack() ? `<button class="icon-btn" data-act="back" aria-label="Geri">${ic('back', 20)}</button>` : '<span></span>'}${langSelect()}</div>`;
     const warnOld = S.user && S.oldServer ? `<div class="banner bad"><b>Server köhnə versiyadadır</b><span>Apps Script-də yeni Code.gs-i yapışdırın, installTriggers funksiyasını bir dəfə işə salın və Deploy → Manage deployments → Edit → New version → Deploy edin.</span></div>` : '';
     $app.innerHTML = `<main>${top}${warnOld}${html}</main>${S.user && !NO_RETURN.includes(S.view) ? nav() : ''}`;
     const f = $app.querySelector('[autofocus]'); if (f) f.focus();
+    translateDom($app);
     if (v.after) v.after(S.params);
   } catch (e) {
-    $app.innerHTML = `<main><div class="card"><b>Xəta</b><span class="muted">${esc(e.message)}</span><button class="btn" data-act="retry">Yenidən cəhd et</button></div></main>${S.user ? nav() : ''}`;
+    $app.innerHTML = `<main><div class="topbar"><span></span>${langSelect()}</div><div class="card"><b>Xəta</b><span class="muted">${esc(e.message)}</span><button class="btn" data-act="retry">Yenidən cəhd et</button></div></main>${S.user ? nav() : ''}`;
+    translateDom($app);
   }
 }
 
@@ -433,9 +443,18 @@ function matRow(it, ix) {
       <label class="field">Qiymət (₼ / ${p.vahid === 'litr' ? 'L' : 'ədəd'})<input data-item="${ix}" data-f="qiymet" inputmode="decimal" value="${esc(it.qiymet)}"></label>
     </div>
     <span class="muted" data-hint="${ix}">Tövsiyə ${money(p.tovsiye_qiymet)} · minimum ${money(p.min_qiymet)}${low ? ' — <b style="color:var(--danger)">minimumdan aşağı satmaq olmaz</b>' : ''}</span>
-    ${lowStock ? `<div class="banner warn"><span>Bu maldan satışdan sonra <b>${grp(Math.max(left, 0), 2)} ${esc(p.vahid)}</b> qalacaq.</span><button class="btn small" data-act="stockReq" data-id="${esc(p.product_id)}">Admin-ə alış sorğusu göndər</button></div>` : ''}
+    ${lowStock ? stockBox(p.product_id, `Bu maldan satışdan sonra <b>${grp(Math.max(left, 0), 2)} ${esc(p.vahid)}</b> qalacaq.`) : ''}
   </div>`;
 }
+
+// Az qalan mal üçün xəbərdarlıq + alış sorğusunun vəziyyəti (gözləyir / rədd edildi)
+function stockBox(pid, text) {
+  const st = (S.boot && S.boot.stockReq || {})[pid];
+  if (st && st.status === 'yeni') return `<div class="banner warn"><span>${text}</span><span class="muted">Alış sorğusu göndərilib, Admin-in cavabı gözlənilir.</span></div>`;
+  if (st && st.status === 'redd') return `<div class="banner warn"><span>${text}</span><span><b>Bu malın alışı rədd edildi.</b>${st.sebeb ? ' Səbəb: ' + esc(st.sebeb) : ''}</span><button class="btn small" data-act="stockReq" data-id="${esc(pid)}">Yenidən sorğu göndər</button></div>`;
+  return `<div class="banner warn"><span>${text}</span><button class="btn small" data-act="stockReq" data-id="${esc(pid)}">Admin-ə alış sorğusu göndər</button></div>`;
+}
+const reqStatus = st => st === 'redd' ? '<span class="pill bad">Rədd edildi</span>' : st === 'alindi' ? '<span class="pill ok">Alındı</span>' : '<span class="pill muted-pill">Gözləyir</span>';
 
 function refreshJob() {
   const d = jobDraft(), t = jobCalc(d);
@@ -515,7 +534,7 @@ VIEWS.receipt = async (p) => {
   const stamp = paid && S.params.stamp;
   return `
   ${p.fresh ? `<div class="between"><span class="pill ok">Yadda saxlanıldı</span><button class="btn small" data-act="home">Əsasa qayıt</button></div>` : ''}
-  ${(r.warnings || []).map(w => `<div class="banner warn"><span><b>${esc(w.ad)}</b>: anbarda ${grp(w.qaliq, 2)} ${esc(w.vahid)} qalıb.</span><button class="btn small" data-act="stockReq" data-id="${esc(w.product_id)}">Admin-ə alış sorğusu göndər</button></div>`).join('')}
+  ${(r.warnings || []).map(w => stockBox(w.product_id, `<b>${esc(w.ad)}</b>: anbarda ${grp(w.qaliq, 2)} ${esc(w.vahid)} qalıb.`)).join('')}
   ${j.borc > 0 && j.status !== 'legv' ? `<div class="banner bad"><b>Ödənilməyib: ${money(j.borc)} borc</b>${canPay ? `<button class="btn small primary" data-act="payDebt" data-id="${esc(j.job_id)}">Ödənişi qəbul et</button>` : ''}</div>` : ''}
   ${receiptHtml(r, stamp)}
   ${paid ? `<label class="check"><input type="checkbox" data-stamp ${S.params.stamp ? 'checked' : ''}>Ödənildi — qəbzə möhür vur</label>` : ''}
@@ -573,7 +592,7 @@ async function sendReminder() {
 // ------------------------------------------------------------- Usta: Mən, borclar
 VIEWS.me = async (p) => {
   const { key, range } = pickRange(p);
-  const s = await cget('myStats', { from: range[0], to: range[1] });
+  const [s, reqs] = await Promise.all([cget('myStats', { from: range[0], to: range[1] }), cget('myStockRequests').catch(() => [])]);
   return `
   <div><div class="muted">${esc(S.user.telefon)}</div><h1>${esc(S.user.ad)}</h1></div>
   ${presetSeg(key, 'me')}
@@ -590,6 +609,8 @@ VIEWS.me = async (p) => {
     <span class="muted">Gözləyən usta haqqı müştəri borcu ödəyəndə hesablanır.</span>
   </div>
   <button class="item" data-act="myDebts"><span class="grow"><span>Ödənilməyən işlər</span><span class="muted">Müştəri borcları</span></span><b style="color:${s.borc ? 'var(--danger)' : 'inherit'}">${money(s.borc)}</b></button>
+  ${reqs.length ? `<h2>Alış sorğularım</h2>
+  <div class="list">${reqs.slice(0, 10).map(x => `<div class="item" style="cursor:default"><span class="grow"><span>${esc(x.ad)}</span><span class="muted">${esc(x.saat)}${x.status === 'redd' && x.sebeb ? ' · Səbəb: ' + esc(x.sebeb) : ''}</span></span>${reqStatus(x.status)}</div>`).join('')}</div>` : ''}
   <button class="btn" data-act="toChangePin">Şifrəni dəyiş</button>
   <button class="btn danger" data-act="logout">Çıxış</button>`;
 };
@@ -924,7 +945,10 @@ VIEWS.requests = async () => {
   return `<h1>Sorğular</h1>
   <h2>Alış sorğuları</h2>
   <div class="list">${r.stock.length ? r.stock.map(x => `
-    <button class="item" data-act="buyFromReq" data-id="${esc(x.product_id)}" data-req="${esc(x.request_id)}"><span class="grow"><span>${esc(x.ad)}</span><span class="muted">${esc(x.usta)} · ${esc(x.saat)} · Alış qeyd et</span></span><span class="pill bad">${grp(x.qaliq, 2)} ${esc(x.vahid)}</span></button>`).join('') : '<div class="empty">Yeni alış sorğusu yoxdur.</div>'}</div>
+    <div class="card" style="gap:10px;padding:12px">
+      <div class="between"><span class="grow" style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:500;font-size:14px">${esc(x.ad)}</span><span class="muted">${esc(x.usta)} · ${esc(x.saat)}</span></span><span class="pill bad">${grp(x.qaliq, 2)} ${esc(x.vahid)}</span></div>
+      <div class="grid2"><button class="btn small primary" data-act="buyFromReq" data-id="${esc(x.product_id)}" data-req="${esc(x.request_id)}">Alış qeyd et</button><button class="btn small" data-act="closeReq" data-id="${esc(x.request_id)}">Almıram, bağla</button></div>
+    </div>`).join('') : '<div class="empty">Yeni alış sorğusu yoxdur.</div>'}</div>
   <h2>Kassa bağlama sorğuları</h2>
   <div class="list">${r.close.length ? r.close.map(x => `<button class="item" data-tab="kassa"><span class="grow"><span>${esc(x.usta)}</span><span class="muted">${fmtDate(x.tarix)} · ${esc(x.saat)}</span></span><span class="pill">Kassaya keç</span></button>`).join('') : '<div class="empty">Yeni sorğu yoxdur.</div>'}</div>`;
 };
@@ -954,12 +978,18 @@ VIEWS.more = async () => {
   <button class="btn danger" data-act="logout">Çıxış</button>`;
 };
 
+const shortDT = s => s ? (s.slice(0, 10) === today() ? s.slice(11) : fmtDate(s.slice(0, 10)).slice(0, 5) + ' ' + s.slice(11)) : '';
+const activityText = u => u.indi ? `İndi aktiv · ${u.cihaz} cihaz` : u.cihaz ? `Girişli · ${u.cihaz} cihaz · son aktivlik ${shortDT(u.son_aktivlik)}` : (u.son_aktivlik ? `Çıxış edib · son aktivlik ${shortDT(u.son_aktivlik)}` : 'Hələ daxil olmayıb');
 VIEWS.users = async () => {
-  const list = await cget('users');
+  const list = await api('users', {}, true);
+  const on = list.filter(u => u.indi).length;
   return `<div class="between"><h1>İstifadəçilər</h1><button class="btn small primary" data-act="newUser">${ic('plus', 18)}Yeni</button></div>
+  <div class="muted">İndi aktiv: <b style="color:var(--text)">${on}</b> · Girişli: <b style="color:var(--text)">${list.filter(u => u.cihaz).length}</b> · Ustaların girişi hər gün 00:00-da bitir.</div>
   <div class="list">${list.map(u => `
     <button class="item" data-act="editUser" data-json="${esc(JSON.stringify(u))}">
-      <span class="grow"><span>${esc(u.ad)}${u.aktiv ? '' : ' (deaktiv)'}</span><span class="muted">${esc(u.telefon)} · ${u.rol === 'admin' ? 'Admin' : 'Usta · usta haqqı ' + money(u.usta_haqqi)}${u.rol !== 'admin' && u.kassa ? ' · kassa' : ''}</span></span>
+      <span class="dot" style="background:${u.indi ? 'var(--ok)' : 'var(--line)'}" aria-hidden="true"></span>
+      <span class="grow"><span>${esc(u.ad)}${u.aktiv ? '' : ' (deaktiv)'}</span><span class="muted">${esc(u.telefon)} · ${u.rol === 'admin' ? 'Admin' : 'Usta · usta haqqı ' + money(u.usta_haqqi)}${u.rol !== 'admin' && u.kassa ? ' · kassa' : ''}</span>
+      <span class="muted">${activityText(u)}</span></span>
     </button>`).join('')}</div>`;
 };
 
@@ -976,7 +1006,9 @@ VIEWS.userForm = (p) => {
     <label class="row" style="font-size:14px"><input type="checkbox" name="aktiv" ${u.aktiv ? 'checked' : ''} style="width:22px;min-height:22px">Aktiv</label>
     <button class="btn primary big" type="submit">Yadda saxla</button>
   </form>
-  ${u.id ? `<button class="btn" data-act="resetPin" data-id="${esc(u.id)}">Müvəqqəti şifrə ver</button>` : '<span class="muted">Yadda saxladıqdan sonra müvəqqəti şifrə ekranda göstəriləcək.</span>'}`;
+  ${u.id ? `<div class="card"><span class="muted">${activityText(u)}${u.son_giris ? ' · son giriş ' + shortDT(u.son_giris) : ''}</span>
+    <button class="btn" data-act="resetPin" data-id="${esc(u.id)}">Müvəqqəti şifrə ver</button>
+    ${u.cihaz && u.id !== S.user.id ? `<button class="btn" data-act="forceLogout" data-id="${esc(u.id)}">Çıxış etdir (bütün cihazlar)</button>` : ''}</div>` : '<span class="muted">Yadda saxladıqdan sonra müvəqqəti şifrə ekranda göstəriləcək.</span>'}`;
 };
 
 VIEWS.settings = () => {
@@ -1126,7 +1158,13 @@ $app.addEventListener('click', e => {
       case 'addRepair': jobDraft().items.push({ nov: 'temir', ad: '', qiymet: '' }); S.editing = false; return render();
       case 'delItem': jobDraft().items.splice(+t.dataset.ix, 1); S.editing = false; return render();
       case 'saveJob': return saveJob();
-      case 'stockReq': { const r = await api('stockRequest', { product_id: id }); toast(r.already ? 'Bu mal üçün sorğu artıq göndərilib' : 'Alış sorğusu Admin-ə göndərildi', true); t.disabled = true; return; }
+      case 'stockReq': { const r = await api('stockRequest', { product_id: id }); toast(r.already ? 'Bu mal üçün sorğu artıq göndərilib' : 'Alış sorğusu Admin-ə göndərildi', true); t.disabled = true; loadBoot(true).catch(() => {}); return; }
+      case 'closeReq': {
+        const why = prompt('Alış sorğusunu bağlayırsınız. Usta "rədd edildi" görəcək. Səbəb (istəyə bağlı):', '');
+        if (why === null) return;
+        await api('closeStockRequest', { request_id: id, sebeb: why }); toast('Sorğu bağlandı', true); await loadBoot(true); return render();
+      }
+      case 'forceLogout': { if (!confirm('Bu istifadəçi bütün cihazlardan çıxarılsın?')) return; await api('forceLogout', { id }); toast('İstifadəçi çıxarıldı', true); return back(); }
       case 'requestClose': if (!confirm('Günün sonudur? Admin-ə kassanı bağlamaq üçün sorğu göndərilsin?')) return; await api('requestClose'); toast('Sorğu Admin-ə göndərildi', true); await loadBoot(true); return render();
       case 'myDebts': return go('debtList', {});
       case 'ustaDebtList': return go('debtList', { user_id: id, ad: t.dataset.name });
@@ -1247,6 +1285,7 @@ $app.addEventListener('input', e => {
 
 $app.addEventListener('change', e => {
   const el = e.target;
+  if (el.dataset.lang !== undefined) { setLang(el.value); render(); return; }
   if (el.dataset.showpwd !== undefined) { el.form.querySelectorAll('input[name=pin],input[name=oldPin],input[name=newPin],input[name=newPin2]').forEach(i => { i.type = el.checked ? 'text' : 'password'; }); return; }
   if (el.dataset.autosubmit !== undefined && el.form) { el.form.requestSubmit(); return; }
   if (el.dataset.stamp !== undefined) { S.params.stamp = el.checked; return render(); }
@@ -1291,6 +1330,11 @@ function warm() {
   const idle = window.requestIdleCallback || (fn => setTimeout(fn, 3000));
   idle(() => loadPdfLibs().catch(() => {}));
 }
+// Hər dəqiqə yoxlama: şifrə yenilənəndə, Admin çıxış etdirəndə və ya saat 00:00-da usta dərhal çıxır
+function ping() { if (S.token && S.user && document.visibilityState === 'visible') api('ping', {}, true).catch(() => {}); }
+setInterval(ping, 60000);
+document.addEventListener('visibilitychange', ping);
+
 (async function start() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (!S.token) { S.view = 'login'; return render(); }
