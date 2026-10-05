@@ -77,6 +77,7 @@ nav.bottom button.on{color:var(--accent)}
 .receipt hr{border:none;border-top:1px dashed #B8B4A8;margin:4px 0;width:100%}
 .receipt .muted{color:#5E5A50}
 .empty{padding:24px;text-align:center;color:var(--muted);font-size:14px}
+.topbar{display:flex;align-items:center;margin:-8px 0 -4px}
 .back{display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--muted);padding:0;cursor:pointer;font-size:14px;min-height:36px}
 </style>
 </head>
@@ -205,11 +206,29 @@ function toast(msg, ok) {
 async function run(fn) { try { await fn(); } catch (e) { toast(e.message); } }
 
 function go(view, params = {}, push = true) {
-  if (push) S.history.push({ view: S.view, params: S.params });
+  if (push) { S.history.push({ view: S.view, params: S.params }); if (S.history.length > 40) S.history.shift(); history.pushState({ app: 1 }, ''); }
   S.view = view; S.params = params; render(); window.scrollTo(0, 0);
 }
-function back() { const h = S.history.pop(); if (h) { S.view = h.view; S.params = h.params; render(); } else go('home', {}, false); }
-function tab(view) { S.history = []; go(view, {}, false); }
+function back() { const h = S.history.pop(); if (h) { S.view = h.view; S.params = h.params; render(); window.scrollTo(0, 0); } else go('home', {}, false); }
+// Tab dəyişəndə də əvvəlki ekran yadda qalır — geri düyməsi bir əvvəlki taba qaytarır
+const NO_RETURN = ['login', 'changePin', 'pinShow'];
+function tab(view) {
+  if (view !== S.view && !NO_RETURN.includes(S.view)) { S.history.push({ view: S.view, params: S.params }); if (S.history.length > 40) S.history.shift(); history.pushState({ app: 1 }, ''); }
+  S.view = view; S.params = {}; render(); window.scrollTo(0, 0);
+}
+const ROOTS = ['home', 'cars', 'kassa', 'me', 'products', 'more'];
+const showBack = () => S.user && !NO_RETURN.includes(S.view) && (S.history.length > 0 || !ROOTS.includes(S.view));
+// Ekrandakı geri düyməsi və telefonun öz "geri" düyməsi eyni işləyir
+function goBack() {
+  if (S.view === 'job' && !confirm('İş yadda saxlanmayıb. Çıxaq?')) return false;
+  if (S.view === 'job') S.draft = null;
+  back(); return true;
+}
+window.addEventListener('popstate', () => {
+  if (!S.user) return;
+  if (!S.history.length && ROOTS.includes(S.view)) return; // ən başdadır — telefon app-dən çıxsın
+  if (!goBack()) history.pushState({ app: 1 }, '');
+});
 function logout(server) { if (server && S.token) fetch(API, { method: 'POST', body: JSON.stringify({ action: 'logout', token: S.token }) }).catch(() => {}); MEM = {}; localStorage.removeItem('swr'); localStorage.removeItem('token'); S.token = ''; S.user = null; S.history = []; S.view = 'login'; render(); }
 
 // ------------------------------------------------------------- Render
@@ -220,7 +239,8 @@ async function render() {
   try {
     const html = await v(S.params);
     if (html === null) return;
-    $app.innerHTML = `<main>${html}</main>${S.user && !['login', 'changePin'].includes(S.view) ? nav() : ''}`;
+    const top = showBack() ? `<div class="topbar"><button class="icon-btn" data-act="back" aria-label="Geri">${ic('back', 20)}</button></div>` : '';
+    $app.innerHTML = `<main>${top}${html}</main>${S.user && !['login', 'changePin'].includes(S.view) ? nav() : ''}`;
     const f = $app.querySelector('[autofocus]'); if (f) f.focus();
     if (v.after) v.after(S.params);
   } catch (e) {
@@ -236,7 +256,7 @@ function nav() {
   return `<nav class="bottom" aria-label="Menyu"><div class="in">${items.map(([v, i, t]) => `<button data-tab="${v}" class="${cur === v ? 'on' : ''}">${ic(i)}${t}</button>`).join('')}</div></nav>`;
 }
 
-const backBtn = (t = 'Geri') => `<button class="back" data-act="back">${ic('back', 18)}${t}</button>`;
+const backBtn = () => ''; // geri düyməsi artıq hər ekranın yuxarı solundadır
 
 // ------------------------------------------------------------- Giriş
 VIEWS.login = () => `
@@ -378,7 +398,7 @@ VIEWS.job = async () => {
   const interval = num(S.settings.interval_km) || 10000;
   const suggestedNext = d.km && d.items.some(i => i.nov === 'mal') ? num(d.km) + interval : '';
   return `
-  <div class="between">${backBtn('Ləğv et')}<span class="muted">Yeni iş</span></div>
+  <h1>Yeni iş</h1>
   ${c ? `
   <div class="card">
     <div class="between"><span class="plate" style="font-size:14px">${esc(c.nomre)}</span><button class="btn small" data-act="changeCar">Dəyiş</button></div>
@@ -487,7 +507,7 @@ VIEWS.receipt = async (p) => {
   const mal = r.items.filter(i => i.nov === 'mal'), tem = r.items.filter(i => i.nov === 'temir');
   const canCancel = j.status !== 'legv' && (isAdmin() || (j.user_id === S.user.id && j.tarix === today()));
   return `
-  ${p.fresh ? `<div class="between"><button class="back" data-act="home">${ic('back', 18)}Əsasa qayıt</button><span class="pill ok">Yadda saxlanıldı</span></div>` : backBtn()}
+  ${p.fresh ? `<div class="between"><span class="pill ok">Yadda saxlanıldı</span><button class="btn small" data-act="home">Əsasa qayıt</button></div>` : ''}
   <div class="receipt">
     <div style="display:flex;flex-direction:column;align-items:center;gap:8px">${logoFull(s.servis_adi, true)}<div class="muted" style="text-align:center">${esc([s.unvan, s.telefon].filter(Boolean).join(' · '))}</div></div>
     <div class="line muted"><span>Qəbz №${esc(j.qebz)}</span><span>${fmtDate(j.tarix_saat.slice(0, 10))} ${esc(j.tarix_saat.slice(11))}</span></div>
@@ -859,7 +879,7 @@ $app.addEventListener('click', e => {
   run(async () => {
     switch (a) {
       case 'retry': return render();
-      case 'back': if (S.view === 'job' && !confirm('İş yadda saxlanmayıb. Çıxaq?')) return; if (S.view === 'job') S.draft = null; return back();
+      case 'back': if (S.history.length) history.back(); else goBack(); return;
       case 'home': S.draft = null; S.boot = null; return tab('home');
       case 'go': return go(t.dataset.v);
       case 'logout': if (!confirm('Çıxış edilsin? Növbəti dəfə PIN soruşulacaq.')) return; return logout(true);
