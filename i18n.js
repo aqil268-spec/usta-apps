@@ -251,6 +251,8 @@ const I18N_DICT = {
 
 // Dəyişən hissəsi olan mətnlər: [nümunə, EN, RU]
 const I18N_PAT = [
+  [/^Son giriş: (.+?)(?: · girişli, (\d+) cihaz)?$/, m => `Last sign-in: ${m[1]}${m[2] ? ' · signed in, ' + m[2] + ' device(s)' : ''}`, m => `Последний вход: ${m[1]}${m[2] ? ' · в системе, устройств: ' + m[2] : ''}`],
+  [/^Son aktivlik: (.+?)(?: · girişli, (\d+) cihaz)?$/, m => `Last active: ${m[1]}${m[2] ? ' · signed in, ' + m[2] + ' device(s)' : ''}`, m => `Был активен: ${m[1]}${m[2] ? ' · в системе, устройств: ' + m[2] : ''}`],
   [/^(\d+) yeni maşın kartı gəlib$/, m => `${m[1]} new car card(s) received`, m => `Новых карточек машин: ${m[1]}`],
   [/^(.+) · (\d+) saat qalıb(?: · (.+))?$/, m => `${m[1]} · ${m[2]} h left${m[3] ? ' · ' + m[3] : ''}`, m => `${m[1]} · осталось ${m[2]} ч${m[3] ? ' · ' + m[3] : ''}`],
   [/^Məlumatlarınız yalnız (.+) üçündür\.$/, m => `Your details are only for ${m[1]}.`, m => `Ваши данные только для ${m[1]}.`],
