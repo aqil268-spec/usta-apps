@@ -17,6 +17,8 @@ const I = {
   back: '<path d="M15 6l-6 6 6 6"/>',
   wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  check: '<path d="M5 12l5 5L20 7"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   share: '<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14"/>',
   bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
   truck: '<path d="M1 4h13v12H1zM14 9h4l3 3v4h-7"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="17.5" cy="18.5" r="2"/>',
@@ -223,7 +225,10 @@ VIEWS.home = async (p) => {
   <div class="between"><div><div class="muted">${longToday()}</div><h1>Bugünkü iş</h1></div></div>
   ${blockBanner(b)}
   <div class="card">
-    <div class="between" style="align-items:flex-end"><div><div class="muted">Mənim qazancım</div><div class="big">${money(t.qazanc)}</div></div><span class="muted">${t.is_sayi} maşın</span></div>
+    <div class="between"><span class="muted">Mənim qazancım</span>${b.myRequestSent
+      ? `<span class="daybtn done">${ic('check', 14)}Sorğu göndərildi</span>`
+      : `<button class="daybtn" data-act="requestClose">${ic('lock', 14)}Günü bağla</button>`}</div>
+    <div class="between" style="align-items:flex-end;margin-top:-8px"><div class="big">${money(t.qazanc)}</div><span class="muted">${t.is_sayi} maşın</span></div>
     <div class="grid3">
       <div class="stat"><span>Usta haqqı</span><b>${money(t.usta_haqqi)}</b></div>
       <div class="stat"><span>Təmir</span><b>${money(t.temir)}</b></div>
@@ -234,8 +239,7 @@ VIEWS.home = async (p) => {
   <button class="btn primary big" data-act="newJob" ${b.blocked ? 'disabled' : ''}>${ic('plus')}Yeni iş</button>
   <form class="search" data-form="carSearch" role="search">${ic('search', 18)}<input name="q" placeholder="Nömrə, marka və ya müştəri" aria-label="Maşın axtar"></form>
   <div class="between"><h2>Son maşınlar</h2><button class="btn ghost small" data-tab="cars">Hamısı</button></div>
-  <div class="list">${b.recent.length ? b.recent.map(r => carRow(r.car, `${fmtDate(r.tarix)} · ${esc(r.xulase)}`, money(r.umumi))).join('') : '<div class="empty">Hələ iş yoxdur. "Yeni iş" ilə başlayın.</div>'}</div>
-  <button class="btn" data-act="requestClose" ${b.myRequestSent ? 'disabled' : ''}>${ic('bell', 18)}${b.myRequestSent ? 'Kassa bağlama sorğusu göndərilib' : 'Gün sonu: kassanı bağlamaq üçün sorğu göndər'}</button>`;
+  <div class="list">${b.recent.length ? b.recent.map(r => carRow(r.car, `${fmtDate(r.tarix)} · ${esc(r.xulase)}`, money(r.umumi))).join('') : '<div class="empty">Hələ iş yoxdur. "Yeni iş" ilə başlayın.</div>'}</div>`;
 };
 
 const dueSub = c => c.due === 'red' ? `<span style="color:var(--danger)">Yağ dəyişmə vaxtı çatıb (${fmtDate(c.novbeti_tarix)})</span>` : c.due === 'orange' ? `<span style="color:var(--accent)">Yağ dəyişməyə az qalıb (${fmtDate(c.novbeti_tarix)})</span>` : '';
@@ -1102,7 +1106,7 @@ $app.addEventListener('click', e => {
       case 'delItem': jobDraft().items.splice(+t.dataset.ix, 1); S.editing = false; return render();
       case 'saveJob': return saveJob();
       case 'stockReq': { const r = await api('stockRequest', { product_id: id }); toast(r.already ? 'Bu mal üçün sorğu artıq göndərilib' : 'Alış sorğusu Admin-ə göndərildi', true); t.disabled = true; return; }
-      case 'requestClose': await api('requestClose'); toast('Sorğu Admin-ə göndərildi', true); await loadBoot(true); return render();
+      case 'requestClose': if (!confirm('Günün sonudur? Admin-ə kassanı bağlamaq üçün sorğu göndərilsin?')) return; await api('requestClose'); toast('Sorğu Admin-ə göndərildi', true); await loadBoot(true); return render();
       case 'myDebts': return go('debtList', {});
       case 'ustaDebtList': return go('debtList', { user_id: id, ad: t.dataset.name });
       case 'payDebt': return go('payForm', { job_id: id, borc: S.params.data.job.borc });
