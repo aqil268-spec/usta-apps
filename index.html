@@ -221,6 +221,7 @@ async function loadBoot(force) {
   const b = force ? await api('bootstrap', {}, true) : await cget('bootstrap');
   if (force) { MEM[swrKey('bootstrap', {})] = b; persist(); }
   S.boot = b; S.user = b.user; S.settings = b.settings; S.products = b.products; S.dict = b.dict || {}; S.cars = b.cars;
+  S.oldServer = !(b.v >= 2);
   return b;
 }
 
@@ -261,7 +262,8 @@ async function render() {
     const html = await v(S.params);
     if (html === null) return;
     const top = showBack() ? `<div class="topbar"><button class="icon-btn" data-act="back" aria-label="Geri">${ic('back', 20)}</button></div>` : '';
-    $app.innerHTML = `<main>${top}${html}</main>${S.user && !NO_RETURN.includes(S.view) ? nav() : ''}`;
+    const warnOld = S.user && S.oldServer ? `<div class="banner bad"><b>Server köhnə versiyadadır</b><span>Apps Script-də yeni Code.gs-i yapışdırın, upgradeV2 funksiyasını işə salın və Deploy → Manage deployments → Edit → New version → Deploy edin.</span></div>` : '';
+    $app.innerHTML = `<main>${top}${warnOld}${html}</main>${S.user && !NO_RETURN.includes(S.view) ? nav() : ''}`;
     const f = $app.querySelector('[autofocus]'); if (f) f.focus();
     if (v.after) v.after(S.params);
   } catch (e) {
@@ -694,11 +696,11 @@ VIEWS.payForm = (p) => `
 // ------------------------------------------------------------- Kassa
 VIEWS.kassa = async () => {
   const k = await cget('kassaToday');
-  const f = k.axin, admin = isAdmin();
+  const f = k.axin || {}, admin = isAdmin(); k.ustalar = k.ustalar || [];
   const isOld = k.tarix !== today();
   return `
   <div class="between"><div><div class="muted">${isOld ? 'Bağlanmamış gün' : longToday()}</div><h1>Kassa${isOld ? ' · ' + fmtDate(k.tarix) : ''}</h1></div>${admin ? `<button class="btn small" data-act="kassaHistory">Tarixçə</button>` : ''}</div>
-  ${k.openDays.length ? `<div class="banner bad"><b>Bağlanmamış gün: ${k.openDays.map(fmtDate).join(', ')}</b><span>${admin ? 'Bu günü bağlayana qədər ustalar yeni iş yaza bilmir.' : 'Admin bağlayana qədər yeni iş yazmaq olmur.'}</span></div>` : ''}
+  ${(k.openDays || []).length ? `<div class="banner bad"><b>Bağlanmamış gün: ${(k.openDays || []).map(fmtDate).join(', ')}</b><span>${admin ? 'Bu günü bağlayana qədər ustalar yeni iş yaza bilmir.' : 'Admin bağlayana qədər yeni iş yazmaq olmur.'}</span></div>` : ''}
   ${admin && k.sorgular && k.sorgular.length ? `<div class="banner warn"><b>Kassa bağlama sorğusu</b>${k.sorgular.map(s => `<span>${esc(s.ad)} · ${fmtDate(s.tarix)} ${esc(s.saat)}</span>`).join('')}</div>` : ''}
   ${k.baglanib ? `<span class="pill ok">Gün bağlanıb · fərq ${money(k.ferq)}</span>` : ''}
   <div class="card">
