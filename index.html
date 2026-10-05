@@ -128,6 +128,24 @@ function periods() {
   return { gun: [t, t], hefte: [ymd(ws), t], ay: [ymd(ms), t] };
 }
 
+// Sürət: oxunan datanı telefonda saxla, dərhal göstər, arxa planda yenilə.
+const WRITES = ['changePin','saveCar','saveJob','cancelJob','addCashMove','closeDay','editCashDay','editCashMove','saveProduct','savePurchase','saveUser','resetPin','saveSettings'];
+let MEM = {}; try { MEM = JSON.parse(localStorage.getItem('swr') || '{}'); } catch (e) { MEM = {}; }
+const persist = () => { try { localStorage.setItem('swr', JSON.stringify(MEM)); } catch (e) { MEM = {}; localStorage.removeItem('swr'); } };
+const swrKey = (a, b) => a + '|' + JSON.stringify(b);
+async function cget(action, body = {}) {
+  const k = swrKey(action, body);
+  if (k in MEM) {
+    const view = S.view, params = S.params;
+    api(action, body, true).then(d => {
+      if (JSON.stringify(d) !== JSON.stringify(MEM[k])) { MEM[k] = d; persist(); if (S.view === view && S.params === params) render(); }
+    }).catch(() => {});
+    return MEM[k];
+  }
+  const d = await api(action, body); MEM[k] = d; persist(); return d;
+}
+function prefetch(action, body = {}) { const k = swrKey(action, body); if (!(k in MEM)) api(action, body, true).then(d => { MEM[k] = d; persist(); }).catch(() => {}); }
+
 async function api(action, body = {}, quiet) {
   if (!API || API.indexOf('http') !== 0) throw new Error('config.js-də API_URL yazılmayıb');
   if (!quiet) loading(true);
@@ -138,6 +156,7 @@ async function api(action, body = {}, quiet) {
       if (j.auth) { logout(); }
       throw new Error(j.error || 'Xəta');
     }
+    if (WRITES.includes(action)) { MEM = {}; persist(); }
     return j.data;
   } catch (e) {
     if (e instanceof TypeError) throw new Error('İnternet bağlantısını yoxlayın');
@@ -163,7 +182,7 @@ function go(view, params = {}, push = true) {
 }
 function back() { const h = S.history.pop(); if (h) { S.view = h.view; S.params = h.params; render(); } else go('home', {}, false); }
 function tab(view) { S.history = []; go(view, {}, false); }
-function logout() { localStorage.removeItem('token'); S.token = ''; S.user = null; S.history = []; S.view = 'login'; render(); }
+function logout() { MEM = {}; localStorage.removeItem('swr'); localStorage.removeItem('token'); S.token = ''; S.user = null; S.history = []; S.view = 'login'; render(); }
 
 // ------------------------------------------------------------- Render
 const VIEWS = {};
@@ -215,8 +234,8 @@ VIEWS.changePin = () => `
 // ------------------------------------------------------------- Usta: Əsas
 VIEWS.home = async (p) => {
   if (isAdmin()) return VIEWS.report(p && p.preset ? p : { preset: 'gun' });
-  const b = await api('bootstrap', {}, !!S.boot);
-  S.boot = b; S.settings = b.settings; S.products = b.products; S.user = b.user;
+  const b = await cget('bootstrap');
+  S.boot = b; S.settings = b.settings; S.products = b.products; S.user = b.user; S.cars = b.cars;
   const t = b.today;
   return `
   <div class="between">
@@ -248,8 +267,18 @@ const carRow = (c, sub, right = '', act = 'openCar') => `
   </button>`;
 
 // ------------------------------------------------------------- Maşınlar
+async function allCars() {
+  if (!S.cars) { const b = await cget('bootstrap'); S.cars = b.cars; S.settings = b.settings; S.products = b.products; }
+  return S.cars;
+}
+function filterCars(cars, q) {
+  const n = s => String(s || '').toLowerCase().replace(/[\s-]/g, '');
+  const k = n(q);
+  if (!k) return cars.slice(-30).reverse();
+  return cars.filter(c => n(c.nomre + c.marka + c.model + c.musteri + c.telefon).includes(k)).slice(0, 50);
+}
 VIEWS.cars = async (p) => {
-  const list = await api('searchCars', { q: p.q || '' });
+  const list = filterCars(await allCars(), p.q || '');
   const pick = p.pick;
   return `
   ${pick ? backBtn() : ''}
@@ -278,7 +307,7 @@ VIEWS.carForm = (p) => {
 };
 
 VIEWS.carHistory = async (p) => {
-  const h = await api('carHistory', { car_id: p.car_id });
+  const h = await cget('carHistory', { car_id: p.car_id });
   const c = h.car;
   S.params.car = c;
   return `
@@ -314,7 +343,7 @@ function jobTotals(d) {
 
 VIEWS.job = async () => {
   const d = jobDraft();
-  if (!S.products.length) { const b = await api('bootstrap'); S.products = b.products; S.settings = b.settings; }
+  if (!S.products.length) { const b = await cget('bootstrap'); S.products = b.products; S.settings = b.settings; S.cars = b.cars; }
   const c = d.car;
   const t = jobTotals(d);
   const prodOpts = S.products.filter(p => p.aktiv).map(p => `<option value="${esc(p.product_id)}">${esc(p.label)} — qalıq ${p.qaliq} ${esc(p.vahid)}</option>`).join('');
@@ -390,7 +419,7 @@ function refreshTotals() {
 
 // ------------------------------------------------------------- Qəbz
 VIEWS.receipt = async (p) => {
-  const r = p.data || await api('receipt', { job_id: p.job_id });
+  const r = p.data || await cget('receipt', { job_id: p.job_id });
   S.params.data = r;
   const j = r.job, c = r.car, s = r.settings;
   const mal = r.items.filter(i => i.nov === 'mal'), tem = r.items.filter(i => i.nov === 'temir');
@@ -446,7 +475,7 @@ function waPhone(p) { let d = String(p || '').replace(/\D/g, ''); if (!d) return
 VIEWS.me = async (p) => {
   const key = p.preset || 'gun';
   const [from, to] = periods()[key];
-  const s = await api('myStats', { from, to });
+  const s = await cget('myStats', { from, to });
   return `
   <div class="between"><div><div class="muted">${esc(S.user.telefon)}</div><h1>${esc(S.user.ad)}</h1></div></div>
   ${presetSeg(key, 'me')}
@@ -470,7 +499,7 @@ const presetSeg = (key, view) => `<div class="seg" role="group" aria-label="Döv
 
 // ------------------------------------------------------------- Kassa
 VIEWS.kassa = async () => {
-  const k = await api('kassaToday');
+  const k = await cget('kassaToday');
   const f = k.axin;
   const admin = isAdmin();
   return `
@@ -517,7 +546,7 @@ VIEWS.kassa = async () => {
 VIEWS.kassaHistory = async (p) => {
   const key = p.preset || 'ay';
   const [from, to] = periods()[key];
-  const days = await api('kassaHistory', { from, to });
+  const days = await cget('kassaHistory', { from, to });
   S.params.range = [from, to];
   return `
   ${backBtn()}<h1>Kassa tarixçəsi</h1>
@@ -537,7 +566,7 @@ VIEWS.kassaHistory = async (p) => {
 VIEWS.report = async (p) => {
   const key = p.preset || 'gun';
   const [from, to] = p.from ? [p.from, p.to] : periods()[key];
-  const r = await api('report', { from, to });
+  const r = await cget('report', { from, to });
   const t = r.cem;
   if (!S.settings.servis_adi) { api('bootstrap', {}, true).then(b => { S.settings = b.settings; S.products = b.products; }).catch(() => {}); }
   return `
@@ -572,7 +601,7 @@ VIEWS.report = async (p) => {
 
 // ------------------------------------------------------------- Admin: Yağlar
 VIEWS.products = async () => {
-  const list = await api('products');
+  const list = await cget('products');
   S.products = list;
   return `
   <div class="between"><h1>Yağlar və mallar</h1><button class="btn small primary" data-act="newProduct">${ic('plus', 18)}Yeni</button></div>
@@ -629,7 +658,7 @@ VIEWS.purchaseForm = (p) => `
   </form>`;
 
 VIEWS.purchaseList = async () => {
-  const list = await api('purchases');
+  const list = await cget('purchases');
   return `${backBtn()}<h1>Son alışlar</h1>
   <div class="card scroll">${list.length ? `<table><tr><th>Tarix</th><th>Məhsul</th><th class="r">Miqdar</th><th class="r">Qiymət</th><th class="r">Cəmi</th></tr>
   ${list.map(b => `<tr><td>${fmtDate(b.tarix)}</td><td>${esc(b.mehsul)}${b.techizatci ? '<br><span class="muted">' + esc(b.techizatci) + '</span>' : ''}</td><td class="r">${b.miqdar}</td><td class="r">${money(b.qiymet)}</td><td class="r">${money(b.cemi)}</td></tr>`).join('')}</table>` : '<div class="empty">Alış yoxdur.</div>'}</div>`;
@@ -647,7 +676,7 @@ VIEWS.more = () => `
   <button class="btn danger" data-act="logout">Çıxış</button>`;
 
 VIEWS.users = async () => {
-  const list = await api('users');
+  const list = await cget('users');
   return `${backBtn()}
   <div class="between"><h1>İstifadəçilər</h1><button class="btn small primary" data-act="newUser">${ic('plus', 18)}Yeni</button></div>
   <div class="list">${list.map(u => `
@@ -705,6 +734,7 @@ $app.addEventListener('submit', e => {
         S.token = r.token; S.user = r.user; localStorage.setItem('token', r.token);
         S.loginPin = d.pin;
         if (r.mustChange) return go('changePin', {}, false);
+        setTimeout(warm, 1500);
         return tab('home');
       }
       case 'changePin': {
@@ -715,6 +745,7 @@ $app.addEventListener('submit', e => {
       case 'carSearch': return go('cars', { q: d.q, pick: f.dataset.pick === '1' }, S.view !== 'cars');
       case 'car': {
         const car = await api('saveCar', { car: d });
+        S.cars = (S.cars || []).filter(c => c.car_id !== car.car_id).concat([car]);
         if (f.dataset.pick === '1') { pickCarObj(car); return; }
         S.history.pop(); return go('carHistory', { car_id: car.car_id }, false);
       }
@@ -772,7 +803,7 @@ $app.addEventListener('click', e => {
       case 'jobForCar': S.draft = null; jobDraft().car = S.params.car; return go('job');
       case 'changeCar': return go('cars', { pick: true });
       case 'openCar': return go('carHistory', { car_id: id });
-      case 'pickCar': { const list = await api('searchCars', { q: '' }, true); let car = list.find(c => c.car_id === id); if (!car) car = (await api('carHistory', { car_id: id })).car; return pickCarObj(car); }
+      case 'pickCar': { let car = (S.cars || []).find(c => c.car_id === id); if (!car) car = (await api('carHistory', { car_id: id })).car; return pickCarObj(car); }
       case 'newCar': { const q = $app.querySelector('[data-form="carSearch"] input'); return go('carForm', { pick: t.dataset.pick === '1', q: q ? q.value : '' }); }
       case 'editCar': return go('carForm', { car: S.params.car });
       case 'addRepair': jobDraft().items.push({ nov: 'temir', ad: '', qiymet: '' }); return render();
@@ -813,6 +844,12 @@ $app.addEventListener('click', e => {
 
 $app.addEventListener('input', e => {
   const el = e.target;
+  if (S.view === 'cars' && el.closest('[data-form="carSearch"]')) {
+    const pick = S.params.pick, list = filterCars(S.cars || [], el.value);
+    const box = $app.querySelector('.list');
+    if (box) box.innerHTML = list.length ? list.map(c => carRow(c, c.son_km ? `Son: ${kmf(c.son_km)}${c.novbeti_km ? ' · növbəti ' + kmf(c.novbeti_km) : ''}` : 'Hələ iş yoxdur', '', pick ? 'pickCar' : 'openCar')).join('') : '<div class="empty">Tapılmadı. "Yeni" ilə əlavə edin.</div>';
+    S.params.q = el.value; return;
+  }
   if (S.view !== 'job') return;
   const d = jobDraft();
   if (el.dataset.bind) { d[el.dataset.bind] = el.value; if (el.dataset.bind === 'usta_haqqi') refreshTotals(); }
@@ -854,9 +891,17 @@ async function saveJob() {
   const job = { car_id: d.car.car_id, km: d.km, usta_haqqi: d.usta_haqqi, nagd, kart, novbeti_km: d.novbeti_km, qeyd: d.qeyd,
     items: d.items.map(i => ({ nov: i.nov, product_id: i.product_id, ad: i.ad, miqdar: i.miqdar, qiymet: i.qiymet })) };
   const r = await api('saveJob', { job });
-  S.draft = null; S.boot = null; S.products = [];
+  S.draft = null; S.boot = null; S.products = []; S.cars = null;
   S.history = [];
   go('receipt', { data: r, fresh: true }, false);
+}
+
+// Tez-tez açılan ekranların datasını əvvəlcədən gətir
+function warm() {
+  if (!S.user) return;
+  if (S.user.kassa || isAdmin()) prefetch('kassaToday');
+  if (isAdmin()) { prefetch('products'); const [f, t] = periods().gun; prefetch('report', { from: f, to: t }); }
+  else { const [f, t] = periods().gun; prefetch('myStats', { from: f, to: t }); }
 }
 
 // ------------------------------------------------------------- Start
@@ -864,9 +909,10 @@ async function saveJob() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (!S.token) { S.view = 'login'; return render(); }
   try {
-    const b = await api('bootstrap');
-    S.user = b.user; S.settings = b.settings; S.products = b.products; S.boot = isAdmin() ? null : b;
+    const b = await cget('bootstrap');
+    S.user = b.user; S.settings = b.settings; S.products = b.products; S.cars = b.cars; S.boot = isAdmin() ? null : b;
     S.view = 'home'; render();
+    warm();
   } catch (e) { if (S.token) { S.view = 'home'; render(); } else render(); }
 })();
 </script>
