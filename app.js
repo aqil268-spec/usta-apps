@@ -62,6 +62,23 @@ function periods() {
 const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'createCarLink', 'approveCarLink', 'rejectCarLink', 'cancelCarLink', 'linkSubmit', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
   'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings'];
 let MEM = {}; try { MEM = JSON.parse(localStorage.getItem('swr') || '{}'); } catch (e) { MEM = {}; }
+
+// Açılış ekranı: servisin adı (son yüklənmədən), ilk ekran hazır olanda və ən az 1,6 s keçəndə gizlənir
+(function splashName() {
+  try {
+    const b = MEM[swrKeyBoot()] || {}, n = (b.settings && b.settings.servis_adi) || '';
+    if (n) { const p = n.split(' '); document.getElementById('sp-name').textContent = p[0].toUpperCase(); document.getElementById('sp-sub').textContent = (p.slice(1).join(' ') || 'SERVİS').toLocaleUpperCase('az'); }
+  } catch (e) { /* adı göstərmək vacib deyil */ }
+})();
+function swrKeyBoot() { return 'bootstrap|{}'; }
+let SPLASH_DONE = false;
+function hideSplash() {
+  if (SPLASH_DONE) return; SPLASH_DONE = true;
+  const el = document.getElementById('splash'); if (!el) return;
+  const wait = Math.max(0, 1600 - performance.now());
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, wait);
+}
+setTimeout(hideSplash, 8000);  // ehtiyat: nə olursa olsun 8 saniyədən sonra açılır
 const persist = () => { try { localStorage.setItem('swr', JSON.stringify(MEM)); } catch (e) { MEM = {}; localStorage.removeItem('swr'); } };
 const swrKey = (a, b) => a + '|' + JSON.stringify(b);
 async function cget(action, body = {}) {
@@ -109,7 +126,13 @@ async function api(action, body = {}, quiet) {
 
 function loading(on) {
   let el = document.querySelector('.loading');
-  if (on && !el) { el = document.createElement('div'); el.className = 'loading'; el.innerHTML = '<div class="spinner"></div>'; document.body.appendChild(el); }
+  if (on && !el) {
+    // Yüklənmə: kapsulda üç damla növbə ilə hoppanır
+    const d = '<svg viewBox="0 0 10 13" aria-hidden="true"><path d="M5 0s5 5.5 5 8.2a5 5 0 0 1-10 0C0 5.5 5 0 5 0z"/></svg>';
+    el = document.createElement('div'); el.className = 'loading';
+    el.innerHTML = `<div class="ld-pill" role="status"><span class="ld-drops">${d}${d}${d}</span><span>${esc(tr('Yüklənir'))}</span></div>`;
+    document.body.appendChild(el);
+  }
   if (!on && el) el.remove();
 }
 function toast(msg, ok) {
@@ -204,10 +227,12 @@ async function render() {
     $app.innerHTML = `<main>${top}${warnOld}${html}</main>${S.user && !NO_RETURN.includes(S.view) ? nav() : ''}`;
     const f = $app.querySelector('[autofocus]'); if (f) f.focus();
     translateDom($app);
+    hideSplash();
     if (v.after) v.after(S.params);
   } catch (e) {
     $app.innerHTML = `<main><div class="topbar"><span></span>${langSelect()}</div><div class="card"><b>Xəta</b><span class="muted">${esc(e.message)}</span><button class="btn" data-act="retry">Yenidən cəhd et</button></div></main>${S.user ? nav() : ''}`;
     translateDom($app);
+    hideSplash();
   }
 }
 
@@ -585,8 +610,8 @@ function refreshJob() {
   const d = jobDraft(), t = jobCalc(d);
   const set = (k, v) => { const el = $app.querySelector(`[data-sum="${k}"]`); if (el) el.textContent = money(v); };
   set('mallar', t.mallar); set('temir', t.temir); set('umumi', t.umumi); set('umumi2', t.umumi);
-  const e = $app.querySelector('[data-err="pay"]'); if (e) e.textContent = t.over ? `Nağd + kart cəmdən (${money(t.umumi)}) çox ola bilməz` : '';
-  const bl = $app.querySelector('[data-sum="borcline"]'); if (bl) bl.innerHTML = t.borc > 0 && !t.over ? `Ödənilməyən hissə borc kimi qalacaq: <b style="color:var(--danger)">${money(t.borc)}</b>` : '';
+  const e = $app.querySelector('[data-err="pay"]'); if (e) e.textContent = t.over ? tr(`Nağd + kart cəmdən (${money(t.umumi)}) çox ola bilməz`) : '';
+  const bl = $app.querySelector('[data-sum="borcline"]'); if (bl) { bl.innerHTML = t.borc > 0 && !t.over ? `Ödənilməyən hissə borc kimi qalacaq: <b style="color:var(--danger)">${money(t.borc)}</b>` : ''; translateDom(bl); }
   const sb = $app.querySelector('[data-act="saveJob"]'); if (sb) sb.disabled = !d.car || t.over;
 }
 
@@ -1413,7 +1438,7 @@ $app.addEventListener('input', e => {
   }
   if (S.view === 'payForm') {
     const f = el.form, sum = num(f.nagd.value) + num(f.kart.value);
-    const er = $app.querySelector('[data-err="pay"]'); if (er) er.textContent = sum - num(S.params.borc) > 0.009 ? `Məbləğ borcdan (${money(S.params.borc)}) çox ola bilməz` : '';
+    const er = $app.querySelector('[data-err="pay"]'); if (er) er.textContent = sum - num(S.params.borc) > 0.009 ? tr(`Məbləğ borcdan (${money(S.params.borc)}) çox ola bilməz`) : '';
     f.querySelector('[type=submit]').disabled = sum - num(S.params.borc) > 0.009;
     return;
   }
@@ -1427,7 +1452,7 @@ $app.addEventListener('input', e => {
       const t = jobCalc(d), nk = $app.querySelector('[data-bind="novbeti_km"]');
       d.novbeti_km = d.km && t.hasOil ? String(num(d.km) + (num(S.settings.interval_km) || 10000)) : '';
       if (nk) nk.value = d.novbeti_km;
-      const er = $app.querySelector('[data-err="km"]'); if (er) er.textContent = d.km && d.car && d.car.son_km && num(d.km) < num(d.car.son_km) ? `Km əvvəlkindən (${kmf(d.car.son_km)}) azdır — yoxlayın` : '';
+      const er = $app.querySelector('[data-err="km"]'); if (er) er.textContent = d.km && d.car && d.car.son_km && num(d.km) < num(d.car.son_km) ? tr(`Km əvvəlkindən (${kmf(d.car.son_km)}) azdır — yoxlayın`) : '';
     }
     refreshJob();
   }
