@@ -66,6 +66,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .pill{font-size:12px;padding:6px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
 .pill.ok{background:#16261C;color:var(--ok)}
 .pill.bad{background:#2A1A1A;color:var(--danger)}
+.pill.muted-pill{background:var(--surface2);color:var(--muted)}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;background:var(--surface2);padding:4px;border-radius:12px}
 .seg button{min-height:40px;border:none;background:none;border-radius:9px;cursor:pointer;font-size:14px}
 .seg button.on{background:var(--accent);color:#121417;font-weight:700}
@@ -88,7 +89,8 @@ nav.bottom button.on{color:var(--accent)}
 .receipt hr{border:none;border-top:1px dashed #B8B4A8;margin:4px 0;width:100%}
 .receipt .muted{color:#5E5A50}
 .empty{padding:24px;text-align:center;color:var(--muted);font-size:14px}
-.topbar{display:flex;align-items:center;margin:-8px 0 -4px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin:-8px 0 -4px;min-height:36px}
+select.lang{width:auto;min-height:30px;height:30px;padding:0 8px;font-size:12px;font-weight:500;letter-spacing:.04em;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;cursor:pointer}
 .back{display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--muted);padding:0;cursor:pointer;font-size:14px;min-height:36px}
 .banner{border-radius:14px;padding:12px 14px;font-size:14px;display:flex;flex-direction:column;gap:8px}
 .banner.bad{background:#3A1E1E;color:#FFD9D9;border:1px solid #6B2B2B}
@@ -115,6 +117,7 @@ nav.bottom button.on{color:var(--accent)}
 </head>
 <body>
 <div id="app"></div>
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
