@@ -188,6 +188,10 @@ const I18N_DICT = {
   'Məbləğ (₼)': ['Amount (₼)', 'Сумма (₼)'], 'Faktiki nağd (₼)': ['Actual cash (₼)', 'Фактические наличные (₼)'],
   'Yağ dəyişmə intervalı (km)': ['Oil change interval (km)', 'Интервал замены масла (км)'], 'İnterval (ay)': ['Interval (months)', 'Интервал (мес.)'],
   'Mətndə istifadə edin: {musteri}, {masin}, {nomre}, {servis}, {telefon}': ['Use in the text: {musteri}, {masin}, {nomre}, {servis}, {telefon}', 'Используйте в тексте: {musteri}, {masin}, {nomre}, {servis}, {telefon}'],
+  'Yüklənir': ['Loading', 'Загрузка'],
+  'Axtarış və tarixçə': ['Search and history', 'Поиск и история'], 'Bu ödəniş': ['This payment', 'Этот платёж'], 'Cəmi ödənilib': ['Total paid', 'Всего оплачено'],
+  'Usta haqqı + təmir': ['Fee + repairs', 'Оплата + ремонт'], 'yağ yoxdur': ['no oil', 'нет масла'], 'Usta haqqı:': ['Mechanic fee:', 'Оплата мастера:'],
+
   // --- Maşın kartı linki
   'Link': ['Link', 'Ссылка'], 'Müştəriyə kart linki': ['Card link for customer', 'Ссылка для клиента'], 'Link yarat': ['Create link', 'Создать ссылку'],
   'Müştəri maşın kartını özü doldurur. Siz yoxlayıb təsdiq edəndən sonra kart bazaya düşür.': ['The customer fills the car card. It enters the database after you check and approve it.', 'Клиент сам заполняет карточку машины. Она попадёт в базу после вашей проверки и подтверждения.'],
@@ -251,6 +255,9 @@ const I18N_DICT = {
 
 // Dəyişən hissəsi olan mətnlər: [nümunə, EN, RU]
 const I18N_PAT = [
+  [/^Km əvvəlkindən \((.+)\) azdır — yoxlayın$/, m => `Km is lower than before (${m[1]}) — check it`, m => `Пробег меньше прежнего (${m[1]}) — проверьте`],
+  [/^Gün bağlanıb · fərq (.+)$/, m => `Day closed · difference ${m[1]}`, m => `День закрыт · разница ${m[1]}`],
+  [/^Günü bağla · (.+)$/, m => `Close the day · ${m[1]}`, m => `Закрыть день · ${m[1]}`],
   [/^Son giriş: (.+?)(?: · girişli, (\d+) cihaz)?$/, m => `Last sign-in: ${m[1]}${m[2] ? ' · signed in, ' + m[2] + ' device(s)' : ''}`, m => `Последний вход: ${m[1]}${m[2] ? ' · в системе, устройств: ' + m[2] : ''}`],
   [/^Son aktivlik: (.+?)(?: · girişli, (\d+) cihaz)?$/, m => `Last active: ${m[1]}${m[2] ? ' · signed in, ' + m[2] + ' device(s)' : ''}`, m => `Был активен: ${m[1]}${m[2] ? ' · в системе, устройств: ' + m[2] : ''}`],
   [/^(\d+) yeni maşın kartı gəlib$/, m => `${m[1]} new car card(s) received`, m => `Новых карточек машин: ${m[1]}`],
