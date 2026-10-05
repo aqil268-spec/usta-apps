@@ -18,6 +18,7 @@ const I = {
   wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   check: '<path d="M5 12l5 5L20 7"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/>',
   dot: '<circle cx="12" cy="12" r="4"/>',
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   share: '<path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14"/>',
@@ -58,7 +59,7 @@ function periods() {
 }
 
 // ------------------------------------------------------------- API + keş
-const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
+const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'createCarLink', 'approveCarLink', 'rejectCarLink', 'cancelCarLink', 'linkSubmit', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
   'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings'];
 let MEM = {}; try { MEM = JSON.parse(localStorage.getItem('swr') || '{}'); } catch (e) { MEM = {}; }
 const persist = () => { try { localStorage.setItem('swr', JSON.stringify(MEM)); } catch (e) { MEM = {}; localStorage.removeItem('swr'); } };
@@ -94,6 +95,7 @@ async function api(action, body = {}, quiet) {
         continue;
       }
       if (!j.ok) {
+        if (j.busy && attempt < 2) { lastErr = new Error(j.error); await sleep(2500); continue; }
         if (j.auth) { logout(false, j.error); const e = new Error(j.error || 'Xəta'); e.auth = true; throw e; }
         else if (j.mustChange && S.view !== 'changePin') { S.history = []; go('changePin', {}, false); }
         throw new Error(j.error || 'Xəta');
@@ -120,13 +122,39 @@ async function run(fn) { try { await fn(); } catch (e) { toast(e.message); } }
 async function loadBoot(force) {
   const b = force ? await api('bootstrap', {}, true) : await cget('bootstrap');
   if (force) { MEM[swrKey('bootstrap', {})] = b; persist(); }
-  S.boot = b; S.user = b.user; S.settings = b.settings; S.products = b.products; S.dict = b.dict || {}; S.cars = b.cars;
+  S.boot = b; S.user = b.user; S.settings = b.settings; S.products = b.products; S.dict = b.dict || {};
+  if (b.cars) S.cars = b.cars; else syncCars(b.carsVer);
   S.oldServer = !(b.v >= 3);
   return b;
 }
 
+// Maşın siyahısı ayrıca saxlanır və yalnız serverdə dəyişəndə yüklənir (versiya ilə)
+let CARS_PENDING = null;
+function carsFromRows(rows) {
+  const t = today(), soon = ymd(new Date(Date.now() + 7 * 864e5));
+  return rows.map(r => {
+    const c = { car_id: r[0], nomre: r[1], marka: r[2], model: r[3], musteri: r[4], telefon: r[5], son_km: r[6], novbeti_km: r[7], novbeti_tarix: r[8], ferqli_nomre: r[9], il: r[10] };
+    c.due = c.novbeti_tarix ? (c.novbeti_tarix <= t ? 'red' : (c.novbeti_tarix <= soon ? 'orange' : '')) : '';
+    return c;
+  });
+}
+function syncCars(ver) {
+  let cached = null; try { cached = JSON.parse(localStorage.getItem('cars') || 'null'); } catch (e) { cached = null; }
+  if (cached && cached.ver === ver) { if (!S.cars || S.carsVer !== ver) { S.cars = carsFromRows(cached.rows); S.carsVer = ver; } return Promise.resolve(); }
+  if (cached && !S.cars) S.cars = carsFromRows(cached.rows);
+  // Telefonda siyahı varsa, yalnız dəyişən maşınlar yüklənir
+  if (!CARS_PENDING) CARS_PENDING = api('cars', cached && cached.ver ? { since: cached.ver } : {}, true).then(d => {
+    let rows = d.rows;
+    if (d.delta && cached) { const m = new Map(cached.rows.map(r => [r[0], r])); d.rows.forEach(r => m.set(r[0], r)); rows = [...m.values()]; }
+    try { localStorage.setItem('cars', JSON.stringify({ ver: d.ver, rows })); } catch (e) { /* yaddaş dolu */ }
+    S.cars = carsFromRows(rows); S.carsVer = d.ver;
+    if (S.view === 'cars' && !S.editing) render();
+  }).catch(() => {}).finally(() => { CARS_PENDING = null; });
+  return CARS_PENDING;
+}
+
 // ------------------------------------------------------------- Naviqasiya
-const NO_RETURN = ['login', 'changePin', 'pinShow'];
+const NO_RETURN = ['login', 'changePin', 'pinShow', 'publicCar'];
 const ROOTS = ['home', 'cars', 'kassa', 'me', 'products', 'more'];
 function go(view, params = {}, push = true) {
   if (push && !NO_RETURN.includes(S.view)) { S.history.push({ view: S.view, params: S.params }); if (S.history.length > 40) S.history.shift(); history.pushState({ app: 1 }, ''); }
@@ -150,7 +178,7 @@ window.addEventListener('popstate', () => {
 });
 function logout(server, why) {
   if (server && S.token) fetch(API, { method: 'POST', body: JSON.stringify({ action: 'logout', token: S.token }) }).catch(() => {});
-  MEM = {}; localStorage.removeItem('swr'); localStorage.removeItem('token');
+  MEM = {}; localStorage.removeItem('swr'); localStorage.removeItem('token'); localStorage.removeItem('cars');
   S.token = ''; S.user = null; S.boot = null; S.cars = null; S.products = []; S.draft = null; S.history = []; S.view = 'login'; render();
   if (why) setTimeout(() => toast(why), 50);
 }
@@ -165,7 +193,8 @@ window.confirm = m => _confirm(tr(m));
 window.prompt = (m, d) => _prompt(tr(m), d);
 
 async function render() {
-  if (!S.token) S.view = 'login';
+  if (S.publicToken) S.view = 'publicCar';
+  else if (!S.token) S.view = 'login';
   const v = VIEWS[S.view] || VIEWS.home;
   try {
     const html = await v(S.params);
@@ -183,12 +212,12 @@ async function render() {
 }
 
 function nav() {
-  const b = S.boot || {}, pend = b.pending ? b.pending.close + b.pending.stock : 0;
+  const b = S.boot || {}, pend = (b.pending ? b.pending.close + b.pending.stock : 0) + (b.carLinks || 0);
   const items = isAdmin()
     ? [['home', 'chart', 'Hesabat'], ['kassa', 'wallet', 'Kassa'], ['products', 'drop', 'Mallar'], ['more', 'more', 'Daha' + (pend ? `<span class="badge">${pend}</span>` : '')]]
     : [['home', 'home', 'Əsas'], ['cars', 'car', 'Maşınlar'], ...(S.user.kassa ? [['kassa', 'wallet', 'Kassa']] : []), ['me', 'user', 'Mən']];
   const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierPay: 'more', cheque: 'more',
-    requests: 'more', ustaDebts: 'more', debtList: isAdmin() ? 'more' : 'me', payForm: isAdmin() ? 'more' : 'me', users: 'more', userForm: 'more', settings: 'more', kassaHistory: 'kassa',
+    requests: 'more', ustaDebts: 'more', carLinks: isAdmin() ? 'more' : 'cars', linkNew: isAdmin() ? 'more' : 'cars', debtList: isAdmin() ? 'more' : 'me', payForm: isAdmin() ? 'more' : 'me', users: 'more', userForm: 'more', settings: 'more', kassaHistory: 'kassa',
     productForm: 'products', purchaseForm: 'products', purchaseList: 'products' };
   const cur = map[S.view] || S.view;
   return `<nav class="bottom" aria-label="Menyu"><div class="in">${items.map(([v, i, t]) => `<button data-tab="${v}" class="${cur === v ? 'on' : ''}">${ic(i)}<span>${t}</span></button>`).join('')}</div></nav>`;
@@ -254,6 +283,7 @@ VIEWS.home = async (p) => {
   return `
   <div class="between"><div><div class="muted">${longToday()}</div><h1>Bugünkü iş</h1></div></div>
   ${blockBanner(b)}
+  ${linkBanner()}
   <div class="card">
     <div class="between"><span class="muted">Mənim qazancım</span>${b.myRequestSent
       ? `<span class="daybtn done">${ic('check', 14)}Sorğu göndərildi</span>`
@@ -281,21 +311,109 @@ const carRow = (c, sub, right = '', act = 'openCar') => `
   </button>`;
 
 // ------------------------------------------------------------- Maşınlar
-async function allCars() { if (!S.cars) await loadBoot(); return S.cars; }
+async function allCars() {
+  if (!S.boot) await loadBoot();
+  if (!S.cars || CARS_PENDING) await (CARS_PENDING || syncCars(S.boot.carsVer));
+  return S.cars || [];
+}
 function filterCars(cars, q) {
   const n = s => String(s || '').toLowerCase().replace(/[\s-]/g, '');
   const k = n(q);
   const dueFirst = (a, b) => ({ red: 0, orange: 1 }[a.due] ?? 2) - ({ red: 0, orange: 1 }[b.due] ?? 2);
   if (!k) return cars.slice(-40).reverse().sort(dueFirst);
-  return cars.filter(c => n(c.nomre + c.marka + c.model + c.musteri + c.telefon).includes(k)).slice(0, 50);
+  // Axtarış sətri hər maşın üçün bir dəfə hazırlanır (hər düymədə yenidən yox)
+  const out = [];
+  for (const c of cars) { if (c._k === undefined) c._k = n(c.nomre + c.marka + c.model + c.musteri + c.telefon); if (c._k.includes(k)) { out.push(c); if (out.length >= 50) break; } }
+  return out;
 }
 const carSub = c => c.son_km ? `Son: ${kmf(c.son_km)}${c.novbeti_km ? ' · növbəti ' + kmf(c.novbeti_km) : ''}` : 'Hələ iş yoxdur';
+// ------------------------------------------------------------- Müştəri üçün maşın kartı linki
+const linkBanner = () => { const n = (S.boot && S.boot.carLinks) || 0; return n ? `<button class="banner ok" data-act="go" data-v="carLinks" style="text-align:left;cursor:pointer"><b>${n} yeni maşın kartı gəlib</b><span>Müştəri linklə doldurub. Yoxlayın və təsdiq edin.</span></button>` : ''; };
+const linkUrl = token => location.origin + location.pathname + '#kart=' + token;
+const linkText = url => `Salam! ${S.settings.servis_adi || 'Servis'} üçün maşınınızın kartını doldurun: ${url}\nLink 48 saat etibarlıdır və yalnız bir dəfə istifadə olunur.`;
+
+VIEWS.linkNew = (p) => {
+  if (p.link) return `
+  <h1>Link hazırdır</h1>
+  <div class="card">
+    <span class="muted">Müştəri linki açır, maşın məlumatlarını yazır və göndərir. Kart sizə "Maşın kartı linkləri" bölməsinə gəlir.</span>
+    <div class="doc" style="word-break:break-all;font-size:13px;user-select:all" data-noi18n>${esc(p.link.url)}</div>
+    <button class="btn primary big" data-act="shareLink">${ic('share')}WhatsApp ilə göndər</button>
+    <button class="btn" data-act="copyLink">Linki kopyala</button>
+    <span class="muted">🔒 Link 48 saat etibarlıdır və yalnız bir dəfə işləyir. Şifrə lazım deyil.</span>
+  </div>
+  <button class="btn" data-act="go" data-v="carLinks">Maşın kartı linkləri</button>`;
+  return `
+  <h1>Müştəriyə kart linki</h1>
+  <form class="card" data-form="carLink">
+    <span class="muted">Müştəri maşın kartını özü doldurur. Siz yoxlayıb təsdiq edəndən sonra kart bazaya düşür.</span>
+    <label class="field">Müştərinin telefonu (istəyə bağlı)<input name="telefon" type="tel" inputmode="tel" placeholder="050 000 00 00"></label>
+    <span class="muted">Telefon yazsanız, WhatsApp birbaşa həmin nömrə ilə açılır.</span>
+    <button class="btn primary big" type="submit">${ic('link')}Link yarat</button>
+  </form>`;
+};
+
+const linkStatus = l => ({ tesdiq: '<span class="pill ok">Təsdiq edildi</span>', redd: '<span class="pill bad">Rədd edildi</span>' }[l.status] || '');
+VIEWS.carLinks = async () => {
+  const r = await api('carLinks', {}, true);
+  const hrs = ms => Math.max(0, Math.round((ms - Date.now()) / 3600000));
+  return `<div class="between"><h1>Maşın kartı linkləri</h1><button class="btn small primary" data-act="go" data-v="linkNew">${ic('link', 18)}Yeni link</button></div>
+  <h2>Doldurulub — təsdiq gözləyir</h2>
+  <div class="list">${r.gozleyir.length ? r.gozleyir.map(l => `
+    <div class="card" style="gap:10px;padding:12px">
+      <div class="between"><span class="plate">${esc(l.nomre)}</span><span class="muted">${esc(l.istifade_saati)}</span></div>
+      <span><b>${esc([l.marka, l.model, l.il].filter(Boolean).join(' '))}</b></span>
+      <span>${esc(l.musteri)} · ${esc(l.telefon)}</span>
+      ${l.qeyd ? `<span class="muted"><span>Qeyd:</span> ${esc(l.qeyd)}</span>` : ''}
+      ${isAdmin() ? `<span class="muted"><span>Linki göndərən:</span> ${esc(l.yaradan)}</span>` : ''}
+      ${l.movcud ? '<span class="muted" style="color:var(--accent)">Bu nömrə bazada var — təsdiq edəndə mövcud kart yenilənəcək.</span>' : ''}
+      <div class="grid2"><button class="btn small primary" data-act="reviewLink" data-json="${esc(JSON.stringify(l))}">Yoxla və təsdiq et</button><button class="btn small" data-act="rejectLink" data-id="${esc(l.link_id)}">Rədd et</button></div>
+    </div>`).join('') : '<div class="empty">Yeni doldurulmuş kart yoxdur.</div>'}</div>
+  <h2>Göndərilmiş linklər</h2>
+  <div class="list">${r.aktiv.length ? r.aktiv.map(l => `
+    <div class="item" style="cursor:default"><span class="grow"><span>${esc(l.hedef_telefon || 'Telefonsuz link')}</span><span class="muted">${esc(l.yaradilma)} · ${hrs(l.bitme)} saat qalıb${isAdmin() ? ' · ' + esc(l.yaradan) : ''}</span></span>
+    <button class="btn small" data-act="cancelLink" data-id="${esc(l.link_id)}">Ləğv et</button></div>`).join('') : '<div class="empty">Gözləyən link yoxdur.</div>'}</div>
+  ${r.kecmis.length ? `<h2>Son baxılanlar</h2><div class="list">${r.kecmis.map(l => `<div class="item" style="cursor:default"><span class="plate">${esc(l.nomre)}</span><span class="grow"><span>${esc(l.musteri)}</span><span class="muted">${esc(l.istifade_saati)}</span></span>${linkStatus(l)}</div>`).join('')}</div>` : ''}`;
+};
+
+// Müştərinin gördüyü səhifə: şifrəsiz, yalnız bu forma
+VIEWS.publicCar = async (p) => {
+  if (p.done) return `<div class="card" style="margin-top:24px;gap:14px;text-align:center;align-items:center">${logoMark(48)}<h1>Təşəkkür edirik!</h1><span>Maşın məlumatları servisə göndərildi.</span><span class="muted">Bu səhifəni bağlaya bilərsiniz.</span></div>`;
+  const info = p.info || (p.info = await api('linkInfo', { k: S.publicToken }));
+  const msg = { yox: 'Link düzgün deyil.', istifade: 'Bu link artıq istifadə olunub.', bitib: 'Linkin vaxtı bitib.', legv: 'Bu link ləğv edilib.' }[info.state];
+  if (msg) return `<div class="card" style="margin-top:24px;gap:12px;text-align:center;align-items:center">${logoMark(48)}<h1>${msg}</h1><span class="muted">Yeni link üçün servislə əlaqə saxlayın.</span></div>`;
+  S.dict = info.dict || {};
+  S.settings = { servis_adi: info.servis, telefon: info.telefon };
+  return `
+  <div style="display:flex;flex-direction:column;gap:6px">${logoFull(info.servis)}<span class="muted" style="text-align:center">${esc(info.telefon || '')}</span></div>
+  <h1>Maşın kartı</h1>
+  <span class="muted">Maşınınızın məlumatlarını yazın və göndərin. Link yalnız bir dəfə işləyir.</span>
+  <form class="card" data-form="publicCar" autocomplete="off">
+    <label class="field">Dövlət nömrəsi<input name="nomre" data-plate="1" placeholder="99-OP-304" required style="text-transform:uppercase" autocomplete="off"></label>
+    <label class="row" style="font-size:14px"><input type="checkbox" name="ferqli_nomre" data-ferqli style="width:22px;min-height:22px">Fərqli nömrə (xarici, köhnə format)</label>
+    <div class="grid2">
+      <label class="field">Marka<input name="marka" list="dl-marka" data-brand placeholder="Axtar və ya yaz" required autocomplete="off"></label>
+      <label class="field">Model<input name="model" list="dl-model" placeholder="Axtar və ya yaz" autocomplete="off"></label>
+    </div>
+    <datalist id="dl-marka">${opts(dictNames('masin_marka'))}</datalist>
+    <datalist id="dl-model"></datalist>
+    <label class="field">Buraxılış ili<input name="il" inputmode="numeric" maxlength="4" placeholder="məs. 2018"></label>
+    <label class="field">Adınız, soyadınız<input name="musteri" required maxlength="80"></label>
+    <label class="field">Telefon (WhatsApp)<input name="telefon" type="tel" inputmode="tel" placeholder="050 000 00 00" required></label>
+    <label class="field">Qeyd<input name="qeyd" maxlength="200" placeholder="istəyə bağlı"></label>
+    <input name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+    <button class="btn primary big" type="submit">Göndər</button>
+    <span class="muted">Məlumatlarınız yalnız ${esc(info.servis)} üçündür.</span>
+  </form>`;
+};
+
 VIEWS.cars = async (p) => {
   const list = filterCars(await allCars(), p.q || '');
   const pick = p.pick;
   const due = (S.cars || []).filter(c => c.due === 'red').length;
   return `
-  <div class="between"><h1>${pick ? 'Maşın seçin' : 'Maşınlar'}</h1><button class="btn small primary" data-act="newCar" data-pick="${pick ? 1 : ''}">${ic('plus', 18)}Yeni</button></div>
+  <div class="between"><h1>${pick ? 'Maşın seçin' : 'Maşınlar'}</h1><div class="row" style="gap:8px">${pick ? '' : `<button class="btn small" data-act="go" data-v="linkNew" aria-label="Müştəriyə kart linki">${ic('link', 18)}Link</button>`}<button class="btn small primary" data-act="newCar" data-pick="${pick ? 1 : ''}">${ic('plus', 18)}Yeni</button></div></div>
+  ${!pick ? linkBanner() : ''}
   ${!pick && due ? `<div class="banner bad"><b>${due} maşının yağ dəyişmə vaxtı çatıb</b><span>Maşına basın və müştəriyə xatırlatma göndərin.</span></div>` : ''}
   <form class="search" data-form="carSearch" data-pick="${pick ? 1 : ''}" role="search">${ic('search', 18)}<input name="q" value="${esc(p.q || '')}" placeholder="Nömrə, marka və ya müştəri" aria-label="Maşın axtar" ${pick ? 'autofocus' : ''}></form>
   <div class="list">${list.length ? list.map(c => carRow(c, carSub(c), '', pick ? 'pickCar' : 'openCar')).join('') : '<div class="empty">Tapılmadı. "Yeni" ilə əlavə edin.</div>'}</div>`;
@@ -305,8 +423,9 @@ VIEWS.carForm = (p) => {
   const c = p.car || { nomre: plateFmt(p.q || '') };
   const brand = c.marka || '';
   return `
-  <h1>${c.car_id ? 'Maşını düzəlt' : 'Yeni maşın'}</h1>
-  <form class="card" data-form="car" data-pick="${p.pick ? 1 : ''}">
+  <h1>${p.link ? 'Kartı yoxlayın' : (c.car_id ? 'Maşını düzəlt' : 'Yeni maşın')}</h1>
+  ${p.link ? '<span class="muted">Müştərinin yazdığını yoxlayın, lazım olsa düzəldin və təsdiq edin.</span>' : ''}
+  <form class="card" data-form="car" data-pick="${p.pick ? 1 : ''}" data-link="${esc(p.link || '')}">
     <input type="hidden" name="car_id" value="${esc(c.car_id || '')}">
     <label class="field">Dövlət nömrəsi<input name="nomre" data-plate="${c.ferqli_nomre === '1' ? '' : '1'}" value="${esc(c.nomre || '')}" placeholder="99-OP-304" required autofocus style="text-transform:uppercase" autocomplete="off"></label>
     <label class="row" style="font-size:14px"><input type="checkbox" name="ferqli_nomre" data-ferqli ${c.ferqli_nomre === '1' ? 'checked' : ''} style="width:22px;min-height:22px">Fərqli nömrə (xarici, köhnə format)</label>
@@ -320,7 +439,7 @@ VIEWS.carForm = (p) => {
     <label class="field">Müştəri adı<input name="musteri" value="${esc(c.musteri || '')}"></label>
     <label class="field">Müştəri telefonu (WhatsApp üçün)<input name="telefon" type="tel" inputmode="tel" value="${esc(c.telefon || '')}" placeholder="050 000 00 00"></label>
     <span class="muted">Siyahıda olmayan marka və ya model yazsanız, bazaya əlavə olunur.</span>
-    <button class="btn primary big" type="submit">Yadda saxla</button>
+    <button class="btn primary big" type="submit">${p.link ? 'Təsdiq et və kart yarat' : 'Yadda saxla'}</button>
   </form>`;
 };
 
@@ -430,11 +549,16 @@ VIEWS.job = async () => {
   <button class="btn primary big" data-act="saveJob" ${c && !t.over ? '' : 'disabled'}>Yadda saxla · <span data-sum="umumi2">${money(t.umumi)}</span></button>`;
 };
 
+// Az qalan mal xəbərdarlığı ayrıca: say dəyişəndə yalnız bu hissə yenilənir
+function matStock(it) {
+  const p = S.products.find(x => x.product_id === it.product_id) || {};
+  const left = r2(num(p.qaliq) - num(it.miqdar));
+  return left <= stockLimit(p) ? stockBox(p.product_id, `Bu maldan satışdan sonra <b>${grp(Math.max(left, 0), 2)} ${esc(p.vahid)}</b> qalacaq.`) : '';
+}
 function matRow(it, ix) {
   const p = S.products.find(x => x.product_id === it.product_id) || {};
   const low = num(it.qiymet) < num(p.min_qiymet);
   const left = r2(num(p.qaliq) - num(it.miqdar));
-  const lowStock = left <= stockLimit(p);
   return `
   <div class="pl">
     <div class="between"><span style="font-weight:500">${esc(p.label || it.ad)}</span><button class="icon-btn" data-act="delItem" data-ix="${ix}" aria-label="Sil">${ic('x', 18)}</button></div>
@@ -443,7 +567,7 @@ function matRow(it, ix) {
       <label class="field">Qiymət (₼ / ${p.vahid === 'litr' ? 'L' : 'ədəd'})<input data-item="${ix}" data-f="qiymet" inputmode="decimal" value="${esc(it.qiymet)}"></label>
     </div>
     <span class="muted" data-hint="${ix}">Tövsiyə ${money(p.tovsiye_qiymet)} · minimum ${money(p.min_qiymet)}${low ? ' — <b style="color:var(--danger)">minimumdan aşağı satmaq olmaz</b>' : ''}</span>
-    ${lowStock ? stockBox(p.product_id, `Bu maldan satışdan sonra <b>${grp(Math.max(left, 0), 2)} ${esc(p.vahid)}</b> qalacaq.`) : ''}
+    <div data-stockbox="${ix}">${matStock(it)}</div>
   </div>`;
 }
 
@@ -966,6 +1090,7 @@ VIEWS.more = async () => {
   return `<div><div class="muted">${esc(S.user.telefon)}</div><h1>${esc(S.user.ad)}</h1></div>
   <div class="list">
     ${item('requests', 'inbox', 'Sorğular', 'Alış və kassa bağlama', pend.close + pend.stock)}
+    ${item('carLinks', 'link', 'Maşın kartı linkləri', 'Müştərinin doldurduğu kartlar', b.carLinks || 0)}
     ${item('income', 'coins', 'Gəlir və xərc', 'Gəlir-xərc hesabatı')}
     ${item('stock', 'box', 'Stok', 'Qalıq, maya, satış dəyəri')}
     ${item('suppliers', 'truck', 'Təchizatçılar', 'Borc, ödəniş, çek')}
@@ -1058,8 +1183,24 @@ $app.addEventListener('submit', e => {
         toast('Şifrə dəyişdirildi', true); await loadBoot(true); S.history = []; return go('home', {}, false);
       }
       case 'carSearch': return go('cars', { q: d.q, pick: f.dataset.pick === '1' }, S.view !== 'cars');
+      case 'carLink': {
+        const r = await api('createCarLink', { telefon: d.telefon });
+        S.params.link = { url: linkUrl(r.token), telefon: r.telefon }; return render();
+      }
+      case 'publicCar': {
+        d.ferqli_nomre = !!f.ferqli_nomre.checked;
+        const r = await api('linkSubmit', { k: S.publicToken, car: d });
+        if (r.state !== 'gonderildi') { S.params.info = { state: r.state }; return render(); }
+        try { history.replaceState(null, '', location.pathname); } catch (e) { /* köhnə brauzer */ }
+        S.params.done = true; return render();
+      }
       case 'car': {
         d.ferqli_nomre = !!f.ferqli_nomre.checked;
+        if (f.dataset.link) {
+          const car = await api('approveCarLink', { link_id: f.dataset.link, car: d });
+          toast('Maşın kartı təsdiq edildi', true); loadBoot(true).catch(() => {});
+          S.history.pop(); return go('carHistory', { car_id: car.car_id }, false);
+        }
         const car = await api('saveCar', { car: d });
         S.cars = (S.cars || []).filter(c => c.car_id !== car.car_id).concat([car]);
         loadBoot(true).catch(() => {});
@@ -1151,6 +1292,22 @@ $app.addEventListener('click', e => {
       case 'jobForCar': S.draft = null; jobDraft().car = S.params.car; return go('job');
       case 'changeCar': return go('cars', { pick: true });
       case 'openCar': return go('carHistory', { car_id: id });
+      case 'shareLink': {
+        const l = S.params.link, text = linkText(l.url);
+        if (navigator.share && !l.telefon) { try { await navigator.share({ text }); } catch (e) { /* bağlandı */ } return; }
+        window.open(`https://wa.me/${l.telefon ? waPhone(l.telefon) : ''}?text=${encodeURIComponent(text)}`, '_blank'); return;
+      }
+      case 'copyLink': {
+        try { await navigator.clipboard.writeText(S.params.link.url); toast('Link kopyalandı', true); }
+        catch (e) { toast('Kopyalamaq alınmadı. Linkə basıb saxlayın və kopyalayın.'); }
+        return;
+      }
+      case 'reviewLink': {
+        const l = JSON.parse(t.dataset.json);
+        return go('carForm', { link: l.link_id, car: { nomre: l.nomre, ferqli_nomre: l.ferqli_nomre, marka: l.marka, model: l.model, il: l.il, musteri: l.musteri, telefon: l.telefon } });
+      }
+      case 'rejectLink': { if (!confirm('Bu kart rədd edilsin? Maşın bazaya əlavə olunmayacaq.')) return; await api('rejectCarLink', { link_id: id }); toast('Kart rədd edildi', true); await loadBoot(true); return render(); }
+      case 'cancelLink': { if (!confirm('Link ləğv edilsin? Müştəri onu aça bilməyəcək.')) return; await api('cancelCarLink', { link_id: id }); toast('Link ləğv edildi', true); return render(); }
       case 'pickCar': { let car = (S.cars || []).find(c => c.car_id === id); if (!car) car = (await api('carHistory', { car_id: id })).car; return pickCarObj(car); }
       case 'newCar': { const q = $app.querySelector('[data-form="carSearch"] input'); return go('carForm', { pick: t.dataset.pick === '1', q: q ? q.value : '' }); }
       case 'editCar': return go('carForm', { car: S.params.car });
@@ -1293,7 +1450,11 @@ $app.addEventListener('change', e => {
   if (el.dataset.brand !== undefined) { const dl = document.getElementById('dl-model'); if (dl) dl.innerHTML = opts(dictChildren('masin_model', el.value)); return; }
   if (el.dataset.ybrand !== undefined) { const dl = document.getElementById('dl-ymodel'); if (dl) dl.innerHTML = opts(dictChildren('yag_model', el.value)); return; }
   if (el.dataset.prodsearch !== undefined) { if (el.value.trim() && !S.products.find(x => x.label === el.value.trim())) toast('Malı siyahıdan seçin'); return; }
-  if (S.view === 'job' && (el.dataset.f === 'miqdar' || el.dataset.bind === 'km')) { S.editing = false; render(); }
+  // Tam yenidən çəkmə yoxdur: əks halda klaviaturadan sonrakı ilk toxunuş itirdi
+  if (S.view === 'job' && el.dataset.f === 'miqdar') {
+    const ix = el.dataset.item, it = jobDraft().items[ix], box = $app.querySelector(`[data-stockbox="${ix}"]`);
+    if (it && box) { box.innerHTML = matStock(it); translateDom(box); }
+  }
 });
 
 async function saveJob() {
@@ -1337,6 +1498,9 @@ document.addEventListener('visibilitychange', ping);
 
 (async function start() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Müştəri üçün bir dəfəlik link: #kart=AÇAR (açar URL-in # hissəsindədir, serverə və loglara getmir)
+  const pk = location.hash.match(/^#kart=([A-Za-z0-9_-]{40,60})$/);
+  if (pk) { S.publicToken = pk[1]; S.view = 'publicCar'; S.params = {}; return render(); }
   if (!S.token) { S.view = 'login'; return render(); }
   try { await loadBoot(); S.view = 'home'; render(); warm(); }
   catch (e) { render(); }
