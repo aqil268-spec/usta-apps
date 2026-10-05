@@ -182,7 +182,7 @@ function go(view, params = {}, push = true) {
 }
 function back() { const h = S.history.pop(); if (h) { S.view = h.view; S.params = h.params; render(); } else go('home', {}, false); }
 function tab(view) { S.history = []; go(view, {}, false); }
-function logout() { MEM = {}; localStorage.removeItem('swr'); localStorage.removeItem('token'); S.token = ''; S.user = null; S.history = []; S.view = 'login'; render(); }
+function logout(server) { if (server && S.token) fetch(API, { method: 'POST', body: JSON.stringify({ action: 'logout', token: S.token }) }).catch(() => {}); MEM = {}; localStorage.removeItem('swr'); localStorage.removeItem('token'); S.token = ''; S.user = null; S.history = []; S.view = 'login'; render(); }
 
 // ------------------------------------------------------------- Render
 const VIEWS = {};
@@ -797,7 +797,7 @@ $app.addEventListener('click', e => {
       case 'back': if (S.view === 'job' && !confirm('İş yadda saxlanmayıb. Çıxaq?')) return; if (S.view === 'job') S.draft = null; return back();
       case 'home': S.draft = null; S.boot = null; return tab('home');
       case 'go': return go(t.dataset.v);
-      case 'logout': return logout();
+      case 'logout': if (!confirm('Çıxış edilsin? Növbəti dəfə PIN soruşulacaq.')) return; return logout(true);
       case 'toChangePin': return go('changePin');
       case 'newJob': S.draft = null; jobDraft(); return go('cars', { pick: true });
       case 'jobForCar': S.draft = null; jobDraft().car = S.params.car; return go('job');
