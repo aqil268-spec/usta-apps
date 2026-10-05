@@ -81,9 +81,34 @@ nav.bottom button{height:56px;border:none;background:none;color:var(--muted);dis
 nav.bottom button.on{color:var(--accent)}
 .toast{position:fixed;left:16px;right:16px;bottom:96px;max-width:488px;margin:0 auto;background:#3A1E1E;color:#FFD9D9;border-radius:12px;padding:12px 14px;font-size:14px;z-index:20}
 .toast.ok{background:#173322;color:#C9F7D7}
-.loading{position:fixed;inset:0;background:rgba(18,20,23,.6);display:flex;align-items:center;justify-content:center;z-index:30}
+.loading{position:fixed;inset:0;background:rgba(18,20,23,.45);display:flex;align-items:center;justify-content:center;z-index:30;animation:ld-in .2s ease-out}
+.ld-pill{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:10px 18px;box-shadow:0 10px 30px rgba(0,0,0,.4);font-size:14px;color:var(--muted)}
+.ld-drops{display:flex;gap:6px;align-items:flex-end;height:22px}
+.ld-drops svg{width:10px;height:13px;animation:ld-bounce 1.1s ease-in-out infinite}
+.ld-drops svg:nth-child(2){animation-delay:.15s}
+.ld-drops svg:nth-child(3){animation-delay:.3s}
+.ld-drops path{fill:var(--accent)}
+@keyframes ld-bounce{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-9px);opacity:1}}
+@keyframes ld-in{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.ld-drops svg{animation-duration:3s}}
 .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* Açılış ekranı (variant A: yağ damlası) */
+#splash{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .35s ease}
+#splash.out{opacity:0;pointer-events:none}
+#splash .sp-drop{position:absolute;left:50%;top:0;width:26px;height:34px;margin-left:-13px;animation:sp-fall .62s cubic-bezier(.5,0,.9,.6) forwards}
+#splash .sp-drop path{fill:var(--accent)}
+#splash .sp-ring{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-60px 0 0 -38px;border:2px solid var(--accent);border-radius:22px;opacity:0;animation:sp-ring .7s .6s ease-out forwards}
+#splash .sp-mark{width:76px;height:76px;animation:sp-pop .5s .58s cubic-bezier(.2,1.5,.4,1) both}
+#splash .sp-word{display:flex;flex-direction:column;align-items:center;line-height:1;animation:sp-up .5s 1s ease-out both}
+#splash .sp-word b{font-size:28px;letter-spacing:.06em}
+#splash .sp-word small{font-size:10px;letter-spacing:.38em;color:var(--muted);margin-top:6px}
+@keyframes sp-fall{0%{transform:translateY(-40px);opacity:1}92%{opacity:1}100%{transform:translateY(calc(50vh - 52px)) scale(.6,.9);opacity:0}}
+@keyframes sp-pop{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes sp-ring{from{transform:scale(.9);opacity:.9}to{transform:scale(1.9);opacity:0}}
+@keyframes sp-up{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){#splash *{animation-duration:1ms!important;animation-delay:0s!important}}
+
 .receipt{background:#FAF9F5;color:#141413;border-radius:16px;padding:20px;font-size:14px;display:flex;flex-direction:column;gap:10px}
 .receipt .line{display:flex;justify-content:space-between;gap:12px}
 .receipt hr{border:none;border-top:1px dashed #B8B4A8;margin:4px 0;width:100%}
@@ -116,6 +141,12 @@ select.lang{width:auto;min-height:30px;height:30px;padding:0 8px;font-size:12px;
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <svg class="sp-drop" viewBox="0 0 26 34"><path d="M13 0s13 14 13 21a13 13 0 0 1-26 0C0 14 13 0 13 0z"/></svg>
+  <div class="sp-ring"></div>
+  <svg class="sp-mark" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#F2994A"/><path d="M24 9c0 0 9.5 10.3 9.5 17.6a9.5 9.5 0 0 1-19 0C14.5 19.3 24 9 24 9z" fill="#141413"/><path d="M27.6 24.2a3.6 3.6 0 0 1-4.6 4.6l-3.7 3.7a1.3 1.3 0 0 1-1.8-1.8l3.7-3.7a3.6 3.6 0 0 1 4.6-4.6l-2 2 .4 1.4 1.4.4z" fill="#F2994A"/></svg>
+  <div class="sp-word"><b id="sp-name">AQQA</b><small id="sp-sub">SERVİS</small></div>
+</div>
 <div id="app"></div>
 <script src="i18n.js"></script>
 <script src="app.js"></script>
