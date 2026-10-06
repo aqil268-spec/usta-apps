@@ -618,7 +618,7 @@ function refreshJob() {
 
 // ------------------------------------------------------------- Qəbz
 // PDF kitabxanaları saytın özündədir (CDN yoxdur): daha sürətli, oflayn işləyir, kənar kod yüklənmir.
-const PDF_LIBS = ['html2canvas.min.js', 'jspdf.umd.min.js'];
+const PDF_LIBS = ['lib/html2canvas.min.js', 'lib/jspdf.umd.min.js'];
 const loadPdfLibs = () => Promise.all(PDF_LIBS.map(loadScript));
 function loadScript(src) {
   return new Promise((ok, bad) => {
