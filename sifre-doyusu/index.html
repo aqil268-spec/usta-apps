@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Şifrə Döyüşü</title>
+<meta name="description" content="İki nəfərlik onlayn şifrə tapma oyunu">
+<meta name="theme-color" content="#0b0f17">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b0f17'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%23ffb020' stroke-width='5'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%2335e08a'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0f17; --bg2:#111725; --card:#151c2c; --line:#24304a; --line2:#2f3d5c;
+  --text:#e8edf7; --muted:#8a96ad; --amber:#ffb020; --amber-d:#3a2a08;
+  --green:#35e08a; --green-d:#0c3322; --red:#ff5c6c; --red-d:#3a1219; --blue:#5aa8ff;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100%}
+body{background:
+  radial-gradient(1200px 500px at 50% -200px,#1b2742 0%,transparent 70%),
+  repeating-linear-gradient(0deg,transparent 0 31px,rgba(255,255,255,.018) 31px 32px),
+  repeating-linear-gradient(90deg,transparent 0 31px,rgba(255,255,255,.018) 31px 32px),var(--bg);
+  min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input{font:inherit}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+.hidden{display:none!important}
+
+/* Başlıq */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:800;letter-spacing:.08em;font-size:15px}
+.dial{width:30px;height:30px;border-radius:50%;border:3px solid var(--amber);position:relative;flex:none}
+.dial:after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+.icon-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);display:grid;place-items:center;color:var(--muted);font-weight:700}
+.icon-btn:hover{color:var(--text);border-color:var(--line2)}
+
+/* Kart */
+.card{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.center{max-width:440px;margin:0 auto}
+h1{font-family:var(--mono);font-size:clamp(32px,9vw,52px);line-height:1;margin:6px 0 10px;letter-spacing:.02em}
+h1 span{color:var(--amber)}
+h2{font-size:18px;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 20px;line-height:1.5}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.field{width:100%;padding:14px 16px;border-radius:12px;border:1px solid var(--line2);background:#0d1320;color:var(--text);font-size:16px;outline:none}
+.field:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,176,32,.15)}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px 18px;border-radius:12px;font-weight:700;font-size:16px;margin-top:12px;transition:transform .08s,filter .15s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--amber);color:#1a1200;box-shadow:0 8px 24px rgba(255,176,32,.25)}
+.btn-primary:hover{filter:brightness(1.07)}
+.btn-ghost{border:1px solid var(--line2);background:#0d1320;color:var(--text)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.err{color:var(--red);font-size:14px;min-height:20px;margin-top:10px}
+.demo{margin-top:16px;border-top:1px dashed var(--line);padding-top:14px}
+.demo-row{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:14px;color:var(--muted);margin:6px 0}
+
+/* Rəqəm xanaları */
+.slots{display:flex;gap:10px;justify-content:center;margin:8px 0 16px}
+.slot{width:62px;height:74px;border-radius:14px;border:2px solid var(--line2);background:#0d1320;display:grid;place-items:center;font-family:var(--mono);font-size:36px;font-weight:800;transition:border-color .15s,transform .15s}
+.slot.filled{border-color:var(--amber);color:var(--amber);transform:translateY(-2px)}
+.slot.cursor{border-color:var(--text);animation:blink 1s infinite}
+@keyframes blink{50%{border-color:var(--line2)}}
+
+/* Klaviatura */
+.pad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.key{height:54px;border-radius:12px;background:#1a2336;border:1px solid var(--line2);font-family:var(--mono);font-size:22px;font-weight:700;transition:background .1s,transform .06s}
+.key:active{transform:scale(.95)}
+.key:hover{background:#212c44}
+.key:disabled{opacity:.25}
+.key.wide{grid-column:span 2;font-family:var(--sans);font-size:15px}
+.key.go{background:var(--amber);color:#1a1200;border-color:var(--amber);grid-column:span 3;font-family:var(--sans);font-size:16px}
+.key.go:disabled{opacity:.35}
+
+/* Paylaşma */
+.share{display:flex;gap:8px;margin-top:6px}
+.share .field{font-family:var(--mono);font-size:13px;color:var(--amber)}
+.share .btn{width:auto;margin:0;padding:0 18px;flex:none}
+.wait{display:flex;align-items:center;gap:12px;color:var(--muted);padding:14px 0 4px}
+.radar{width:22px;height:22px;border-radius:50%;border:2px solid var(--green);position:relative;flex:none}
+.radar:after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--green);animation:ping 1.4s infinite}
+@keyframes ping{to{transform:scale(2.2);opacity:0}}
+.code-tag{display:inline-block;font-family:var(--mono);font-weight:800;color:var(--amber);background:var(--amber-d);padding:2px 8px;border-radius:6px;letter-spacing:.1em}
+
+/* Oyun ekranı */
+.hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:12px}
+.pl{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;min-width:0;transition:border-color .2s,box-shadow .2s}
+.pl.right{text-align:right}
+.pl.active{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber),0 0 24px rgba(255,176,32,.2)}
+.pl .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.score{font-family:var(--mono);font-weight:800;font-size:22px;letter-spacing:.05em;text-align:center}
+.score small{display:block;font-size:10px;color:var(--muted);letter-spacing:.15em;font-weight:500}
+.banner{border-radius:14px;padding:12px 14px;text-align:center;font-weight:700;margin-bottom:12px;border:1px solid var(--line)}
+.banner.me{background:var(--amber-d);border-color:var(--amber);color:var(--amber)}
+.banner.them{background:var(--bg2);color:var(--muted)}
+.banner.alert{background:var(--red-d);border-color:var(--red);color:#ffc2c8}
+.dots{display:inline-flex;gap:3px;margin-left:6px;vertical-align:middle}
+.dots i{width:6px;height:6px;border-radius:50%;background:currentColor;animation:dot 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%,60%,100%{opacity:.2}30%{opacity:1}}
+
+.mysecret{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:13px;margin-bottom:12px}
+.mysecret button{font-family:var(--mono);font-weight:800;color:var(--green);background:var(--green-d);padding:4px 10px;border-radius:8px;letter-spacing:.2em;font-size:15px}
+
+.tabs{display:flex;gap:6px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:10px}
+.tab{flex:1;padding:10px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted)}
+.tab.on{background:var(--card);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.cols{display:grid;grid-template-columns:1fr;gap:12px}
+.col{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;min-height:120px}
+.col h3{margin:2px 4px 10px;font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;display:flex;justify-content:space-between}
+.list{display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow:auto}
+.row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:#0f1522;border:1px solid transparent}
+.row.new{animation:pop .5s ease}
+.row.win{border-color:var(--green);background:var(--green-d)}
+@keyframes pop{0%{transform:scale(.96);background:#26324d}100%{transform:none}}
+.row .n{font-family:var(--mono);color:var(--muted);font-size:12px}
+.row .dg{font-family:var(--mono);font-size:22px;font-weight:800;letter-spacing:.35em}
+.res{display:flex;align-items:center;gap:8px}
+.pins{display:grid;grid-template-columns:repeat(2,10px);gap:4px}
+.pin{width:10px;height:10px;border-radius:50%;background:#26304a}
+.pin.b{background:var(--green);box-shadow:0 0 8px rgba(53,224,138,.6)}
+.pin.c{background:var(--amber);box-shadow:0 0 8px rgba(255,176,32,.5)}
+.res .t{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:46px;text-align:right}
+.empty{color:var(--muted);font-size:14px;text-align:center;padding:24px 8px}
+
+.panel{margin-top:12px}
+.notes{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin:4px 0 12px}
+.note{height:38px;border-radius:9px;border:1px solid var(--line2);background:#0d1320;font-family:var(--mono);font-weight:700;font-size:17px;position:relative}
+.note.x{color:#55607a;background:#0a0e17;border-color:#1b2235}
+.note.x:after{content:"";position:absolute;left:20%;right:20%;top:50%;height:2px;background:var(--red);transform:rotate(-20deg)}
+.note.ok{color:var(--green);border-color:var(--green);background:var(--green-d)}
+.hint{font-size:12px;color:var(--muted);margin:0 2px 6px;display:flex;justify-content:space-between}
+.legend{display:flex;gap:14px;justify-content:center;font-size:12px;color:var(--muted);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+/* Nəticə */
+.overlay{position:fixed;inset:0;background:rgba(5,8,14,.78);backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px;z-index:20}
+.result{max-width:400px;width:100%;text-align:center}
+.result .big{font-size:58px;margin:4px 0}
+.result h2{font-family:var(--mono);font-size:28px;margin:6px 0}
+.reveal{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0 6px}
+.reveal div{background:#0d1320;border:1px solid var(--line2);border-radius:12px;padding:10px}
+.reveal small{color:var(--muted);display:block;font-size:12px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.reveal b{font-family:var(--mono);font-size:24px;letter-spacing:.2em;color:var(--amber)}
+
+.rules ol{padding-left:20px;line-height:1.6;color:#c9d2e3;margin:8px 0}
+.rules .ex{font-family:var(--mono);background:#0d1320;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.7;color:var(--muted)}
+.rules .ex b{color:var(--text)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1e283d;border:1px solid var(--line2);padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;box-shadow:0 10px 30px rgba(0,0,0,.4);transition:opacity .3s}
+.spectate{font-size:12px;color:var(--blue);text-align:center;margin-bottom:10px}
+
+@media (min-width:760px){
+  .cols{grid-template-columns:1fr 1fr}
+  .tabs{display:none}
+  .col.mobile-hide{display:block}
+  .play-grid{display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start}
+  .panel{margin-top:0}
+  .list{max-height:58vh}
+}
+@media (max-width:759px){ .col.mobile-hide{display:none} }
+@media (max-width:380px){ .slot{width:54px;height:66px;font-size:30px} .key{height:50px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="logo"><div class="dial"></div>ŞİFRƏ DÖYÜŞÜ</div>
+    <button class="icon-btn" id="rulesBtn" title="Qaydalar">?</button>
+  </div>
+
+  <!-- Konfiqurasiya yoxdur -->
+  <section id="vNoApi" class="card center hidden">
+    <h2>Server qoşulmayıb</h2>
+    <p class="lead">config.js faylında API_URL boşdur. Apps Script "Web app" linkini ora yazın.</p>
+  </section>
+
+  <!-- Ana səhifə -->
+  <section id="vHome" class="card center hidden">
+    <h1>Şifrəni<br><span>sındır.</span></h1>
+    <p class="lead">4 rəqəmli gizli şifrə seç. Rəqibin şifrəsini ondan tez tap. İpucular yalnız rəqəmlərdir.</p>
+    <label for="nameHome">Adınız</label>
+    <input id="nameHome" class="field" maxlength="16" placeholder="Məs. Aqil" autocomplete="nickname">
+    <button class="btn btn-primary" id="createBtn">Yeni oyun yarat</button>
+    <div class="err" id="homeErr"></div>
+    <div class="demo">
+      <div class="hint"><span>Nümunə: gizli şifrə <b class="code-tag">4271</b></span></div>
+      <div class="demo-row">1 2 3 4 → <span class="pins"><span class="pin b"></span><span class="pin c"></span><span class="pin c"></span><span class="pin"></span></span> 1 düz · 2 yer</div>
+      <div class="demo-row">4 2 7 1 → <span class="pins"><span class="pin b"></span><span class="pin b"></span><span class="pin b"></span><span class="pin b"></span></span> sındırıldı!</div>
+    </div>
+  </section>
+
+  <!-- Qoşulma -->
+  <section id="vJoin" class="card center hidden">
+    <h2>Döyüşə çağırıldınız ⚔️</h2>
+    <p class="lead"><b id="joinHost">Rəqib</b> sizi oyuna çağırır. Oyun kodu: <span class="code-tag" id="joinCode"></span></p>
+    <label for="nameJoin">Adınız</label>
+    <input id="nameJoin" class="field" maxlength="16" placeholder="Məs. Nigar" autocomplete="nickname">
+    <button class="btn btn-primary" id="joinBtn">Qoşul</button>
+    <div class="err" id="joinErr"></div>
+  </section>
+
+  <!-- Şifrə seçimi -->
+  <section id="vSetup" class="center hidden">
+    <div class="card" id="shareCard">
+      <h2>Rəqibi çağırın</h2>
+      <p class="lead" style="margin-bottom:8px">Bu linki göndərin. Linki açan ikinci adam rəqibiniz olur.</p>
+      <div class="share">
+        <input class="field" id="shareLink" readonly>
+        <button class="btn btn-primary" id="shareBtn">Göndər</button>
+      </div>
+      <div class="wait"><div class="radar"></div><span>Rəqib gözlənilir…</span></div>
+    </div>
+    <div class="card" id="secretCard" style="margin-top:12px">
+      <h2>Gizli şifrənizi seçin</h2>
+      <p class="lead" style="margin-bottom:6px">4 rəqəm. Rəqəmlər təkrarlanmır. 0 ilə başlaya bilər.</p>
+      <div class="slots" id="secretSlots"></div>
+      <div class="pad" id="secretPad"></div>
+      <div class="err" id="secretErr"></div>
+    </div>
+    <div class="card hidden" id="readyCard" style="margin-top:12px;text-align:center">
+      <div style="font-size:13px;color:var(--muted)">Sizin şifrəniz</div>
+      <div class="slots" id="readySlots"></div>
+      <div class="wait" style="justify-content:center"><div class="radar"></div><span id="readyText">Rəqib şifrəsini seçir…</span></div>
+    </div>
+  </section>
+
+  <!-- Oyun -->
+  <section id="vPlay" class="hidden">
+    <div class="hud">
+      <div class="pl" id="hudMe"><div class="nm" id="meName"></div><div class="sub" id="meSub"></div></div>
+      <div class="score" id="scoreBox"><small>HESAB</small><span id="score">0:0</span></div>
+      <div class="pl right" id="hudOpp"><div class="nm" id="oppName"></div><div class="sub" id="oppSub"></div></div>
+    </div>
+    <div class="spectate hidden" id="spectateNote">👁 Siz izləyicisiniz</div>
+    <div class="banner" id="banner"></div>
+    <div class="mysecret" id="mySecretBox">Sizin şifrəniz: <button id="mySecretBtn" title="Göstər / gizlət">••••</button></div>
+
+    <div class="play-grid">
+      <div>
+        <div class="tabs" id="tabs">
+          <button class="tab on" data-tab="mine">Mənim hücumum</button>
+          <button class="tab" data-tab="theirs">Rəqibin hücumu</button>
+        </div>
+        <div class="cols">
+          <div class="col" id="colMine"><h3><span id="mineTitle">Mənim təxminlərim</span><span id="mineCount"></span></h3><div class="list" id="listMine"></div></div>
+          <div class="col mobile-hide" id="colTheirs"><h3><span id="theirsTitle">Rəqibin təxminləri</span><span id="theirsCount"></span></h3><div class="list" id="listTheirs"></div></div>
+        </div>
+        <div class="legend"><span><i class="pin b"></i> düz yerdə</span><span><i class="pin c"></i> var, yeri səhv</span><span><i class="pin"></i> yoxdur</span></div>
+      </div>
+
+      <div class="panel" id="panel">
+        <div class="card" style="padding:14px">
+          <div class="hint"><span>Qeyd dəftəri (toxunun: ✗ / ✓)</span><button id="notesReset" style="color:var(--muted);font-size:12px">sıfırla</button></div>
+          <div class="notes" id="notes"></div>
+          <div class="slots" id="guessSlots"></div>
+          <div class="pad" id="guessPad"></div>
+          <div class="err" id="guessErr"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Nəticə -->
+<div class="overlay hidden" id="resultBox">
+  <div class="card result">
+    <div class="big" id="resIcon">🏆</div>
+    <h2 id="resTitle">Qalib sənsən!</h2>
+    <div style="color:var(--muted)" id="resSub"></div>
+    <div class="reveal">
+      <div><small id="revName1"></small><b id="revCode1"></b></div>
+      <div><small id="revName2"></small><b id="revCode2"></b></div>
+    </div>
+    <button class="btn btn-primary" id="rematchBtn">Revanş 🔁</button>
+    <button class="btn btn-ghost" id="viewBoardBtn">Təxminlərə bax</button>
+    <button class="btn btn-ghost" id="newGameBtn">Yeni oyun</button>
+  </div>
+</div>
+
+<!-- Qaydalar -->
+<div class="overlay hidden" id="rulesBox">
+  <div class="card rules" style="max-width:460px;width:100%">
+    <h2>Qaydalar</h2>
+    <ol>
+      <li>Hər oyunçu 4 rəqəmli gizli şifrə seçir. Rəqəmlər təkrarlanmır.</li>
+      <li>Növbə ilə rəqibin şifrəsini təxmin edirsiniz.</li>
+      <li>Hər təxmindən sonra ipucu gəlir:<br>🟢 rəqəm var və yeri düzdür,<br>🟡 rəqəm var, amma yeri səhvdir.</li>
+      <li>Hansı rəqəmin düz olduğunu ipucu demir. Bunu siz tapırsınız.</li>
+      <li>Şifrəni birinci sındıran qalib olur.</li>
+      <li>Başlayan oyunçu şifrəni tapsa, rəqib eyni sayda gediş edir. O da tapsa, heç-heçədir.</li>
+    </ol>
+    <div class="ex">Şifrə: <b>4271</b><br>Təxmin <b>1234</b> → 🟢1 🟡2<br>(2 düz yerdə; 1 və 4 var, yeri səhv)</div>
+    <button class="btn btn-primary" id="rulesClose">Aydındır</button>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+(() => {
+  'use strict';
+  const API = ((window.SD_CONFIG || {}).API_URL || '').trim();
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+    set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+  };
+
+  // ---------- Vəziyyət ----------
+  const params = new URLSearchParams(location.search);
+  let gameId = (params.get('g') || '').toUpperCase().replace(/[^A-Z]/g,'');
+  let token = gameId ? (store.get('sd_tok_' + gameId) || '') : '';
+  let joined = false;
+  let S = null;              // serverdən son vəziyyət
+  let lastUpdated = '';
+  let polling = null, busy = false;
+  let secretInput = '', guessInput = '';
+  let showSecret = false, tab = 'mine', resultDismissed = '';
+  let seenGuesses = 0, lastTurnMine = false;
+
+  const views = ['vNoApi','vHome','vJoin','vSetup','vPlay'];
+  function show(id){ views.forEach(v => $(v).classList.toggle('hidden', v !== id)); }
+
+  function toast(msg){
+    const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); t.style.opacity = 1;
+    clearTimeout(toast._t); toast._t = setTimeout(() => { t.style.opacity = 0; setTimeout(()=>t.classList.add('hidden'),300); }, 2200);
+  }
+
+  async function api(action, data){
+    const res = await fetch(API, { method:'POST', body: JSON.stringify(Object.assign({ action }, data || {})) });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || 'Xəta');
+    return j;
+  }
+
+  // ---------- Klaviatura ----------
+  function buildPad(el, getVal, setVal, onGo, goLabel){
+    el.innerHTML = '';
+    [1,2,3,4,5,6,7,8,9,0].forEach(d => {
+      const b = document.createElement('button'); b.className = 'key'; b.textContent = d; b.dataset.d = d;
+      b.onclick = () => { const v = getVal(); if (v.length < 4 && !v.includes(String(d))) { setVal(v + d); } };
+      el.appendChild(b);
+    });
+    const del = document.createElement('button'); del.className = 'key wide'; del.textContent = '⌫ Sil';
+    del.onclick = () => setVal(getVal().slice(0,-1));
+    const go = document.createElement('button'); go.className = 'key go'; go.textContent = goLabel; go.dataset.go = '1';
+    go.onclick = onGo;
+    el.appendChild(del); el.appendChild(go);
+  }
+  function paintSlots(el, val){
+    el.innerHTML = '';
+    for (let i = 0; i < 4; i++){
+      const s = document.createElement('div');
+      s.className = 'slot' + (val[i] ? ' filled' : (i === val.length ? ' cursor' : ''));
+      s.textContent = val[i] || '';
+      el.appendChild(s);
+    }
+  }
+  function paintPad(el, val, enabled){
+    el.querySelectorAll('.key').forEach(k => {
+      if (k.dataset.d !== undefined) k.disabled = !enabled || val.includes(k.dataset.d) || val.length >= 4;
+      else if (k.dataset.go) k.disabled = !enabled || val.length !== 4;
+      else k.disabled = !enabled || !val.length;
+    });
+  }
+
+  // Fiziki klaviatura
+  document.addEventListener('keydown', e => {
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    const pad = !$('vPlay').classList.contains('hidden') ? $('guessPad') : (!$('secretCard').classList.contains('hidden') && !$('vSetup').classList.contains('hidden') ? $('secretPad') : null);
+    if (!pad) return;
+    let btn = null;
+    if (/^\d$/.test(e.key)) btn = pad.querySelector('[data-d="'+e.key+'"]');
+    else if (e.key === 'Backspace') btn = pad.querySelector('.key.wide');
+    else if (e.key === 'Enter') btn = pad.querySelector('[data-go]');
+    if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
+  });
+
+  // Şifrə
+  buildPad($('secretPad'), () => secretInput, v => { secretInput = v; renderSecret(); }, submitSecret, 'Təsdiqlə ✓');
+  function renderSecret(){ paintSlots($('secretSlots'), secretInput); paintPad($('secretPad'), secretInput, true); }
+  async function submitSecret(){
+    $('secretErr').textContent = '';
+    const code = secretInput;
+    paintPad($('secretPad'), code, false);
+    try { await api('secret', { gameId, token, code }); secretInput = ''; await refresh(true); }
+    catch(e){ $('secretErr').textContent = e.message; paintPad($('secretPad'), code, true); }
+  }
+
+  // Təxmin
+  buildPad($('guessPad'), () => guessInput, v => { guessInput = v; renderGuessInput(); }, submitGuess, 'Yoxla 🔓');
+  function myTurn(){ return S && S.seat && (S.status === 'playing' || S.status === 'lastchance') && S.turn === S.seat; }
+  function renderGuessInput(){ paintSlots($('guessSlots'), guessInput); paintPad($('guessPad'), guessInput, myTurn() && !busy); }
+  async function submitGuess(){
+    $('guessErr').textContent = '';
+    const g = guessInput;
+    busy = true; renderGuessInput();
+    try { await api('guess', { gameId, token, guess: g }); guessInput = ''; busy = false; await refresh(true); }
+    catch(e){ busy = false; $('guessErr').textContent = e.message; renderGuessInput(); }
+  }
+
+  // Qeyd dəftəri
+  function notesKey(){ return 'sd_notes_' + gameId + '_' + (S ? S.round : 0); }
+  function getNotes(){ try { return JSON.parse(store.get(notesKey()) || '{}'); } catch(e){ return {}; } }
+  function renderNotes(){
+    const n = getNotes(); const el = $('notes'); el.innerHTML = '';
+    for (let d = 0; d <= 9; d++){
+      const b = document.createElement('button');
+      b.className = 'note' + (n[d] === 1 ? ' x' : n[d] === 2 ? ' ok' : '');
+      b.textContent = d;
+      b.onclick = () => { const m = getNotes(); m[d] = ((m[d] || 0) + 1) % 3; store.set(notesKey(), JSON.stringify(m)); renderNotes(); };
+      el.appendChild(b);
+    }
+  }
+  $('notesReset').onclick = () => { store.set(notesKey(), '{}'); renderNotes(); };
+
+  // ---------- Ekranların çəkilməsi ----------
+  function names(){
+    const me = S.seat === 2 ? S.p2 : S.p1, opp = S.seat === 2 ? S.p1 : S.p2;
+    return { me, opp, meSeat: S.seat === 2 ? 2 : 1, oppSeat: S.seat === 2 ? 1 : 2 };
+  }
+
+  function render(){
+    if (!S) return;
+    const st = S.status;
+    if (st === 'waiting' || st === 'setup'){
+      if (!S.seat){ renderPlay(); return; }
+      show('vSetup');
+      const n = names();
+      $('shareCard').classList.toggle('hidden', S.p2.joined);
+      $('shareLink').value = shareUrl();
+      const iReady = n.me.ready;
+      $('secretCard').classList.toggle('hidden', iReady);
+      $('readyCard').classList.toggle('hidden', !iReady);
+      if (iReady){
+        paintSlots($('readySlots'), S.mySecret || '');
+        $('readyText').textContent = !S.p2.joined ? 'Rəqib qoşulanda oyun başlayır…' : (n.opp.name || 'Rəqib') + ' şifrəsini seçir…';
+      } else renderSecret();
+      return;
+    }
+    renderPlay();
+  }
+
+  function renderPlay(){
+    show('vPlay');
+    const spectator = !S.seat;
+    const n = names();
+    $('spectateNote').classList.toggle('hidden', !spectator);
+    $('meName').textContent = spectator ? S.p1.name : (n.me.name + ' (siz)');
+    $('oppName').textContent = spectator ? (S.p2.name || '—') : (n.opp.name || '—');
+    $('score').textContent = spectator ? (S.p1.wins + ':' + S.p2.wins) : (n.me.wins + ':' + n.opp.wins);
+
+    const leftSeat = spectator ? 1 : n.meSeat, rightSeat = spectator ? 2 : n.oppSeat;
+    const leftG = S.guesses.filter(g => g.p === leftSeat), rightG = S.guesses.filter(g => g.p === rightSeat);
+    $('meSub').textContent = leftG.length + ' təxmin';
+    $('oppSub').textContent = rightG.length + ' təxmin';
+    const playing = S.status === 'playing' || S.status === 'lastchance';
+    $('hudMe').classList.toggle('active', playing && S.turn === leftSeat);
+    $('hudOpp').classList.toggle('active', playing && S.turn === rightSeat);
+
+    // Banner
+    const b = $('banner'); b.className = 'banner';
+    if (S.status === 'finished'){
+      b.classList.add('them');
+      b.textContent = S.winner === 'draw' ? 'Heç-heçə 🤝' : ((S.winner === '1' ? S.p1.name : S.p2.name) + ' qalib gəldi 🏆');
+    } else if (spectator){
+      b.classList.add('them');
+      const who = S.turn === 1 ? S.p1.name : S.p2.name;
+      b.innerHTML = esc(who) + ' düşünür<span class="dots"><i></i><i></i><i></i></span>';
+    } else if (myTurn()){
+      if (S.status === 'lastchance'){ b.classList.add('alert'); b.textContent = '⚠️ Rəqib şifrənizi sındırdı! Son şans: tapsanız heç-heçədir.'; }
+      else { b.classList.add('me'); b.textContent = 'Sənin növbən. Şifrəni təxmin et!'; }
+    } else {
+      b.classList.add('them');
+      const extra = S.status === 'lastchance' ? ' Siz şifrəni sındırdınız! Rəqibin son şansı:' : '';
+      b.innerHTML = esc(extra ? extra.trim() + ' ' : '') + esc(n.opp.name || 'Rəqib') + ' düşünür<span class="dots"><i></i><i></i><i></i></span>';
+    }
+
+    // Öz şifrəm
+    $('mySecretBox').classList.toggle('hidden', spectator);
+    $('mySecretBtn').textContent = showSecret ? (S.mySecret || '') : '••••';
+
+    // Siyahılar
+    $('mineTitle').textContent = spectator ? (S.p1.name + ' təxminləri') : 'Mənim təxminlərim';
+    $('theirsTitle').textContent = spectator ? ((S.p2.name || '—') + ' təxminləri') : ((n.opp.name || 'Rəqib') + ' təxminləri');
+    $('mineCount').textContent = leftG.length || '';
+    $('theirsCount').textContent = rightG.length || '';
+    const fresh = S.guesses.length > seenGuesses;
+    paintList($('listMine'), leftG, spectator ? 'Hələ təxmin yoxdur.' : 'Rəqibin şifrəsini tapmaq üçün aşağıdan 4 rəqəm yazın.', fresh);
+    paintList($('listTheirs'), rightG, spectator ? 'Hələ təxmin yoxdur.' : 'Rəqib hələ təxmin etməyib.', fresh);
+    seenGuesses = S.guesses.length;
+
+    // Tablar (mobil)
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
+    $('colMine').classList.toggle('mobile-hide', tab !== 'mine');
+    $('colTheirs').classList.toggle('mobile-hide', tab !== 'theirs');
+
+    // Panel
+    $('panel').classList.toggle('hidden', spectator || S.status === 'finished');
+    renderNotes(); renderGuessInput();
+
+    // Növbə dəyişəndə xəbər ver
+    const mine = !!myTurn();
+    if (mine && !lastTurnMine){ try { navigator.vibrate && navigator.vibrate(60); } catch(e){} flashTitle(); }
+    lastTurnMine = mine;
+
+    // Nəticə
+    if (S.status === 'finished' && resultDismissed !== String(S.round)) showResult();
+    else if (S.status !== 'finished') $('resultBox').classList.add('hidden');
+  }
+
+  function paintList(el, items, emptyText, fresh){
+    if (!items.length){ el.innerHTML = '<div class="empty">' + esc(emptyText) + '</div>'; return; }
+    el.innerHTML = '';
+    items.forEach((g, i) => {
+      const r = document.createElement('div');
+      r.className = 'row' + (g.b === 4 ? ' win' : '') + (fresh && i === items.length - 1 ? ' new' : '');
+      let pins = '';
+      for (let k = 0; k < 4; k++) pins += '<span class="pin' + (k < g.b ? ' b' : (k < g.b + g.c ? ' c' : '')) + '"></span>';
+      r.innerHTML = '<span class="n">#' + (i+1) + '</span><span class="dg">' + g.g + '</span>' +
+        '<span class="res"><span class="pins">' + pins + '</span><span class="t">' + (g.b === 4 ? 'SINDI!' : g.b + '🟢 ' + g.c + '🟡') + '</span></span>';
+      el.appendChild(r);
+    });
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function showResult(){
+    const spectator = !S.seat;
+    const w = S.winner;
+    let icon = '🤝', title = 'Heç-heçə!', sub = 'İkiniz də şifrəni eyni sayda gedişdə tapdınız.';
+    if (w !== 'draw'){
+      const wName = w === '1' ? S.p1.name : S.p2.name;
+      const winCount = S.guesses.filter(g => String(g.p) === w).length;
+      if (spectator){ icon = '🏆'; title = wName + ' qalib!'; }
+      else if (String(S.seat) === w){ icon = '🏆'; title = 'Qalib sənsən!'; }
+      else { icon = '💥'; title = 'Şifrən sındırıldı'; }
+      sub = wName + ' şifrəni ' + winCount + ' təxmində tapdı.';
+    }
+    $('resIcon').textContent = icon; $('resTitle').textContent = title; $('resSub').textContent = sub;
+    $('revName1').textContent = S.p1.name + ' şifrəsi'; $('revCode1').textContent = S.p1.secret || '';
+    $('revName2').textContent = S.p2.name + ' şifrəsi'; $('revCode2').textContent = S.p2.secret || '';
+    $('rematchBtn').classList.toggle('hidden', spectator);
+    $('resultBox').classList.remove('hidden');
+  }
+
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function shareUrl(){ return location.origin + location.pathname + '?g=' + gameId; }
+
+  let titleTimer = null;
+  function flashTitle(){
+    if (!document.hidden) return;
+    let on = false; clearInterval(titleTimer);
+    titleTimer = setInterval(() => { document.title = (on = !on) ? '🔔 Sənin növbən!' : 'Şifrə Döyüşü'; }, 900);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden){ clearInterval(titleTimer); document.title = 'Şifrə Döyüşü'; refresh(); }
+  });
+
+  // ---------- Sinxronizasiya ----------
+  async function refresh(force){
+    if (!gameId || (busy && !force)) return;
+    try {
+      const s = await api('state', { gameId, token });
+      if (force || s.updated !== lastUpdated || !S){
+        if (S && s.round !== S.round){ seenGuesses = 0; showSecret = false; }
+        S = s; lastUpdated = s.updated; render();
+      }
+    } catch(e){
+      if (/tapılmadı/.test(e.message)){ stopPoll(); toast('Oyun tapılmadı'); goHome(); }
+    }
+  }
+  function startPoll(){ stopPoll(); refresh(true); polling = setInterval(() => { if (!document.hidden) refresh(); }, 2000); }
+  function stopPoll(){ clearInterval(polling); polling = null; }
+
+  // ---------- Hadisələr ----------
+  const savedName = store.get('sd_name') || '';
+  $('nameHome').value = savedName; $('nameJoin').value = savedName;
+
+  $('createBtn').onclick = async () => {
+    const name = $('nameHome').value.trim();
+    $('homeErr').textContent = '';
+    if (!name){ $('homeErr').textContent = 'Adınızı yazın'; $('nameHome').focus(); return; }
+    store.set('sd_name', name);
+    const btn = $('createBtn'); btn.disabled = true; btn.textContent = 'Yaradılır…';
+    try {
+      const r = await api('create', { name });
+      gameId = r.gameId; token = r.token; store.set('sd_tok_' + gameId, token);
+      history.replaceState(null, '', '?g=' + gameId);
+      joined = true; startPoll();
+    } catch(e){ $('homeErr').textContent = e.message; }
+    btn.disabled = false; btn.textContent = 'Yeni oyun yarat';
+  };
+
+  $('joinBtn').onclick = async () => {
+    const name = $('nameJoin').value.trim();
+    $('joinErr').textContent = '';
+    if (!name){ $('joinErr').textContent = 'Adınızı yazın'; $('nameJoin').focus(); return; }
+    store.set('sd_name', name);
+    const btn = $('joinBtn'); btn.disabled = true; btn.textContent = 'Qoşulur…';
+    try { await doJoin(name); } catch(e){ $('joinErr').textContent = e.message; }
+    btn.disabled = false; btn.textContent = 'Qoşul';
+  };
+
+  async function doJoin(name){
+    const r = await api('join', { gameId, token, name });
+    if (r.token){ token = r.token; store.set('sd_tok_' + gameId, token); }
+    if (!r.seat) toast('Oyunda artıq 2 oyunçu var. Siz izləyicisiniz.');
+    joined = true; startPoll();
+  }
+
+  $('shareBtn').onclick = async () => {
+    const url = shareUrl();
+    const text = 'Şifrə Döyüşünə gəl! Şifrəmi sındıra bilərsən? 🔐';
+    if (navigator.share){ try { await navigator.share({ title:'Şifrə Döyüşü', text, url }); return; } catch(e){ if (e && e.name === 'AbortError') return; } }
+    try { await navigator.clipboard.writeText(url); toast('Link kopyalandı'); }
+    catch(e){ $('shareLink').select(); toast('Linki kopyalayın'); }
+  };
+  $('shareLink').onclick = e => e.target.select();
+
+  $('mySecretBtn').onclick = () => { showSecret = !showSecret; $('mySecretBtn').textContent = showSecret ? (S.mySecret || '') : '••••'; };
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => { tab = t.dataset.tab; render(); });
+
+  $('rematchBtn').onclick = async () => {
+    const b = $('rematchBtn'); b.disabled = true;
+    try { await api('rematch', { gameId, token }); resultDismissed = ''; await refresh(true); } catch(e){ toast(e.message); }
+    b.disabled = false;
+  };
+  $('viewBoardBtn').onclick = () => { resultDismissed = String(S.round); $('resultBox').classList.add('hidden'); };
+  $('newGameBtn').onclick = goHome;
+
+  function goHome(){
+    stopPoll(); S = null; gameId = ''; token = ''; joined = false; lastUpdated = ''; seenGuesses = 0;
+    $('resultBox').classList.add('hidden');
+    history.replaceState(null, '', location.pathname);
+    show('vHome');
+  }
+
+  $('rulesBtn').onclick = () => $('rulesBox').classList.remove('hidden');
+  $('rulesClose').onclick = () => $('rulesBox').classList.add('hidden');
+  $('rulesBox').onclick = e => { if (e.target.id === 'rulesBox') $('rulesBox').classList.add('hidden'); };
+
+  // ---------- Başlanğıc ----------
+  async function init(){
+    if (!API){ show('vNoApi'); return; }
+    if (!gameId){ show('vHome'); return; }
+    if (token){ // əvvəl qoşulmusunuz: birbaşa davam
+      try { await doJoin(''); return; } catch(e){ /* aşağıda qoşulma ekranı */ }
+    }
+    try {
+      const s = await api('state', { gameId, token: '' });
+      if (s.p2.joined){ // yer yoxdur: izləyici kimi aç
+        joined = true; startPoll(); toast('Oyunda artıq 2 oyunçu var. Siz izləyicisiniz.'); return;
+      }
+      $('joinHost').textContent = s.p1.name || 'Rəqib';
+      $('joinCode').textContent = gameId;
+      show('vJoin');
+    } catch(e){
+      toast(e.message); goHome();
+    }
+  }
+  init();
+})();
+</script>
+</body>
+</html>
