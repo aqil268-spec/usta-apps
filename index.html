@@ -139,6 +139,14 @@ select.lang{width:auto;min-height:30px;height:30px;padding:0 8px;font-size:12px;
 .doc table td,.doc table th{border-bottom:1px solid #E2DED3;color:#141413}
 .pl{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--line)}
 
+/* Barkod kamerası */
+.cam{position:fixed;inset:0;z-index:60;background:rgba(8,9,11,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px}
+.cam-box{position:relative;width:100%;max-width:520px;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:4/3}
+.cam-box video{width:100%;height:100%;object-fit:cover;display:block}
+.cam-line{position:absolute;left:10%;right:10%;top:30%;bottom:30%;border:2px solid var(--accent);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.cam-hint{color:var(--muted);font-size:14px}
+.cam .btn{min-width:160px}
+
 /* Sütunlar: telefonda alt-alta (əvvəlki kimi), kompüterdə yan-yana */
 .cols,.col{display:flex;flex-direction:column;gap:16px}
 .side-head,.side-foot,.side-only,nav.bottom .side-only{display:none}

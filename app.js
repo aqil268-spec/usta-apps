@@ -17,6 +17,7 @@ const I = {
   back: '<path d="M15 6l-6 6 6 6"/>',
   wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/>',
   check: '<path d="M5 12l5 5L20 7"/>',
   link: '<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/>',
   dot: '<circle cx="12" cy="12" r="4"/>',
@@ -535,15 +536,18 @@ VIEWS.carHistory = async (p) => {
 };
 
 // ------------------------------------------------------------- Yeni iş
-function jobDraft() { return S.draft || (S.draft = { car: null, km: '', items: [], nagd: '', kart: '', novbeti_km: '', novbeti_ay: '', kmTouched: false, qeyd: '' }); }
+function jobDraft() { return S.draft || (S.draft = { car: null, km: '', items: [], nagd: '', kart: '', novbeti_km: '', novbeti_ay: '', kmTouched: false, qeyd: '', haqq: '', haqqTouched: false }); }
+// Usta haqqı (yağdəyişmə haqqı): standart = işdəki malların ən böyük haqqı. Usta çekdə dəyişə və ya silə bilər.
+const prodById = id => S.products.find(p => p.product_id === id) || {};
+const stdHaqq = d => d.items.filter(i => i.nov === 'mal').reduce((m, i) => Math.max(m, num(prodById(i.product_id).deyisme_haqqi)), 0);
 function jobCalc(d) {
   const mallar = d.items.filter(i => i.nov === 'mal').reduce((s, i) => s + num(i.miqdar) * num(i.qiymet), 0);
   const temir = d.items.filter(i => i.nov === 'temir').reduce((s, i) => s + num(i.qiymet), 0);
   const hasOil = d.items.some(i => i.nov === 'mal' && (S.products.find(p => p.product_id === i.product_id) || {}).nov === 'yag');
-  const usta = hasOil ? num(S.user.usta_haqqi) : 0;
+  const std = stdHaqq(d), usta = r2(d.haqqTouched ? Math.max(num(d.haqq), 0) : std);
   const umumi = r2(mallar + temir + usta);
   const paid = r2(num(d.nagd) + num(d.kart));
-  return { mallar: r2(mallar), temir: r2(temir), usta, hasOil, umumi, paid, borc: r2(umumi - paid), over: paid - umumi > 0.009 };
+  return { mallar: r2(mallar), temir: r2(temir), usta, std, hasOil, umumi, paid, borc: r2(umumi - paid), over: paid - umumi > 0.009 };
 }
 const stockLimit = p => num(p.min_qaliq) || num(S.settings.min_qaliq_standart || 2);
 
@@ -567,7 +571,7 @@ VIEWS.job = async () => {
   <div class="card">
     <h2>Yağ və mallar</h2>
     ${d.items.map((it, ix) => it.nov === 'mal' ? matRow(it, ix) : '').join('')}
-    <label class="field">Mal axtar<input data-prodsearch list="dl-prod" placeholder="Marka, model, özlülük..." autocomplete="off"></label>
+    <div class="row" style="align-items:flex-end"><label class="field" style="flex:1">Mal axtar və ya barkodu oxudun<input data-prodsearch list="dl-prod" placeholder="Marka, model, özlülük..." autocomplete="off"></label>${camBtn()}</div>
     <datalist id="dl-prod">${S.products.filter(p => p.aktiv).map(p => `<option value="${esc(p.label)}">${p.qaliq} ${esc(p.vahid)}</option>`).join('')}</datalist>
   </div>
 
@@ -585,8 +589,11 @@ VIEWS.job = async () => {
   </div><div class="col sticky">
 
   <div class="card">
-    <div class="between"><span>Usta haqqı</span><b>${money(t.usta)}</b></div>
-    <span class="muted">${t.hasOil ? 'Yağ dəyişmə üçün Admin-in təyin etdiyi məbləğ.' : 'İşdə yağ yoxdur — usta haqqı yazılmır.'}</span>
+    <div class="pl">
+      <div class="between"><span style="font-weight:500">Usta haqqı (yağdəyişmə)</span><button class="icon-btn" data-act="delHaqq" aria-label="Sil">${ic('x', 18)}</button></div>
+      <label class="field">Məbləğ (₼)<input data-bind="haqq" inputmode="decimal" value="${esc(d.haqqTouched ? d.haqq : (t.std || ''))}" placeholder="0"></label>
+      <span class="muted" data-sum="haqqnote">${haqqNote(d, t)}</span>
+    </div>
     <div class="grid3">
       <div class="stat"><span>Mallar</span><b data-sum="mallar">${money(t.mallar)}</b></div>
       <div class="stat"><span>Təmir</span><b data-sum="temir">${money(t.temir)}</b></div>
@@ -613,6 +620,11 @@ VIEWS.job = async () => {
   <button class="btn primary big" data-act="saveJob" ${c && !t.over ? '' : 'disabled'}>Yadda saxla · <span data-sum="umumi2">${money(t.umumi)}</span></button>
   </div></div>`;
 };
+
+function haqqNote(d, t) {
+  if (d.haqqTouched && t.usta !== t.std) return `Dəyişdirilib. Standart: <b>${money(t.std)}</b> <button type="button" class="btn small ghost" data-act="resetHaqq">Standarta qaytar</button>`;
+  return t.std ? 'Malın standart haqqı. Lazım olsa, dəyişin və ya silin.' : 'Malda haqq yazılmayıb. Lazımdırsa, məbləği yazın.';
+}
 
 // Az qalan mal xəbərdarlığı ayrıca: say dəyişəndə yalnız bu hissə yenilənir
 function matStock(it) {
@@ -652,6 +664,7 @@ function refreshJob() {
   const e = $app.querySelector('[data-err="pay"]'); if (e) e.textContent = t.over ? tr(`Nağd + kart cəmdən (${money(t.umumi)}) çox ola bilməz`) : '';
   const bl = $app.querySelector('[data-sum="borcline"]'); if (bl) { bl.innerHTML = t.borc > 0 && !t.over ? `Ödənilməyən hissə borc kimi qalacaq: <b style="color:var(--danger)">${money(t.borc)}</b>` : ''; translateDom(bl); }
   const sb = $app.querySelector('[data-act="saveJob"]'); if (sb) sb.disabled = !d.car || t.over;
+  const hn = $app.querySelector('[data-sum="haqqnote"]'); if (hn) { hn.innerHTML = haqqNote(d, t); translateDom(hn); }
 }
 
 // ------------------------------------------------------------- Qəbz
@@ -973,14 +986,15 @@ VIEWS.products = async () => {
   return `
   <div class="between"><h1>Mallar</h1><button class="btn small primary" data-act="newProduct">${ic('plus', 18)}Yeni</button></div>
   <button class="btn" data-act="newPurchase">${ic('plus', 18)}Alış qeyd et</button>
-  <form class="search" role="search">${ic('search', 18)}<input data-prodfilter placeholder="Mal axtar" aria-label="Mal axtar"></form>
+  <div class="row"><form class="search" role="search" style="flex:1">${ic('search', 18)}<input data-prodfilter placeholder="Mal axtar və ya barkodu oxudun" aria-label="Mal axtar"></form>${camBtn()}</div>
   <div class="list" data-prodlist>${prodItems(list)}</div>
   <div class="grid2"><button class="btn" data-act="go" data-v="stock">Stok hesabatı</button><button class="btn" data-act="purchaseList">Son alışlar</button></div>`;
 };
 const prodItems = list => list.length ? list.map(p => `
     <button class="item" data-act="editProduct" data-id="${esc(p.product_id)}">
       <span class="grow"><span>${esc(p.label)}${p.aktiv ? '' : ' (deaktiv)'}</span>
-      <span class="muted">Tövsiyə ${money(p.tovsiye_qiymet)} · min ${money(p.min_qiymet)} · maya ${money(p.maya)}</span></span>
+      <span class="muted">Tövsiyə ${money(p.tovsiye_qiymet)} · min ${money(p.min_qiymet)} · maya ${money(p.maya)}</span>
+      ${p.barkod || p.deyisme_haqqi ? `<span class="muted">${p.deyisme_haqqi ? `<span>Usta haqqı</span> ${money(p.deyisme_haqqi)}` : ''}${p.barkod && p.deyisme_haqqi ? ' · ' : ''}${p.barkod ? `<span data-noi18n>▮ ${esc(p.barkod)}</span>` : ''}</span>` : ''}</span>
       <span class="pill ${p.qaliq <= stockLimit(p) ? 'bad' : ''}">${grp(p.qaliq, 2)} ${esc(p.vahid)}</span>
     </button>`).join('') : '<div class="empty">Mal yoxdur.</div>';
 
@@ -1008,6 +1022,9 @@ VIEWS.productForm = (p) => {
       <label class="field">Minimum qiymət (₼)<input name="min_qiymet" inputmode="decimal" value="${esc(x.min_qiymet ?? '')}" required></label>
     </div>
     <label class="field">Az qalma həddi (boşdursa ${esc(S.settings.min_qaliq_standart || 2)})<input name="min_qaliq" inputmode="decimal" value="${esc(x.min_qaliq || '')}"></label>
+    <div class="row" style="align-items:flex-end"><label class="field" style="flex:1">Barkod<input name="barkod" data-barcode value="${esc(x.barkod || '')}" placeholder="Skanerlə oxudun və ya yazın" autocomplete="off" spellcheck="false"></label>${camBtn()}</div>
+    <label class="field">Yağdəyişmə haqqı (₼)<input name="deyisme_haqqi" inputmode="decimal" value="${esc(x.deyisme_haqqi || '')}" placeholder="məs. 15"></label>
+    <span class="muted">Bu mal işə əlavə olunanda bu məbləğ çekə "usta haqqı" kimi yazılır və ustaya çatır. Usta çekdə onu dəyişə və ya silə bilər.</span>
     <label class="row" style="font-size:14px"><input type="checkbox" name="aktiv" ${x.aktiv ? 'checked' : ''} style="width:22px;min-height:22px">Aktiv (ustalar görür)</label>
     <span class="muted">Siyahıda olmayan marka, model və ya özlülük yazsanız, bazaya əlavə olunur.</span>
     <button class="btn primary big" type="submit">Yadda saxla</button>
@@ -1268,7 +1285,7 @@ VIEWS.users = async () => {
   <div class="list">${list.map(u => `
     <button class="item" data-act="editUser" data-json="${esc(JSON.stringify(u))}">
       <span class="dot" style="background:${u.indi ? 'var(--ok)' : 'var(--line)'}" aria-hidden="true"></span>
-      <span class="grow"><span>${esc(u.ad)}${u.aktiv ? '' : ' (deaktiv)'}</span><span class="muted">${esc(u.telefon)} · ${u.rol === 'admin' ? 'Admin' : 'Usta · usta haqqı ' + money(u.usta_haqqi)}${u.rol !== 'admin' && u.kassa ? ' · kassa' : ''}</span>
+      <span class="grow"><span>${esc(u.ad)}${u.aktiv ? '' : ' (deaktiv)'}</span><span class="muted">${esc(u.telefon)} · ${u.rol === 'admin' ? 'Admin' : 'Usta'}${u.rol !== 'admin' && u.kassa ? ' · kassa' : ''}</span>
       <span class="muted">${activityText(u)}</span></span>
     </button>`).join('')}</div>`;
 };
@@ -1281,7 +1298,6 @@ VIEWS.userForm = (p) => {
     <label class="field">Ad, soyad<input name="ad" value="${esc(u.ad || '')}" required autofocus></label>
     <label class="field">Telefon (giriş üçün)<input name="telefon" type="tel" inputmode="tel" value="${esc(u.telefon || '')}" required></label>
     <label class="field">Rol<select name="rol"><option value="usta" ${u.rol !== 'admin' ? 'selected' : ''}>Usta</option><option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Admin</option></select></label>
-    <label class="field">Yağ dəyişmənin usta haqqı (₼)<input name="usta_haqqi" inputmode="decimal" value="${esc(u.usta_haqqi || '')}" placeholder="məs. 15"></label>
     <label class="row" style="font-size:14px"><input type="checkbox" name="kassa" ${u.kassa ? 'checked' : ''} style="width:22px;min-height:22px">Kassanı görə bilər (yalnız bu gün)</label>
     <label class="row" style="font-size:14px"><input type="checkbox" name="aktiv" ${u.aktiv ? 'checked' : ''} style="width:22px;min-height:22px">Aktiv</label>
     <button class="btn primary big" type="submit">Yadda saxla</button>
@@ -1503,6 +1519,9 @@ $app.addEventListener('click', e => {
       case 'remind': return sendReminder();
       case 'addRepair': jobDraft().items.push({ nov: 'temir', ad: '', qiymet: '' }); S.editing = false; return render();
       case 'delItem': jobDraft().items.splice(+t.dataset.ix, 1); S.editing = false; return render();
+      case 'delHaqq': { const d = jobDraft(); d.haqq = '0'; d.haqqTouched = true; S.editing = false; return render(); }
+      case 'resetHaqq': { const d = jobDraft(); d.haqq = ''; d.haqqTouched = false; S.editing = false; return render(); }
+      case 'camScan': return openCamera();
       case 'saveJob': return saveJob();
       case 'stockReq': { const r = await api('stockRequest', { product_id: id }); toast(r.already ? 'Bu mal üçün sorğu artıq göndərilib' : 'Alış sorğusu Admin-ə göndərildi', true); t.disabled = true; loadBoot(true).catch(() => {}); return; }
       case 'closeReq': {
@@ -1580,12 +1599,8 @@ $app.addEventListener('input', e => {
     // Siyahıdan seçiləndə mal dərhal əlavə olunur
     const p = S.products.find(x => x.label === el.value.trim());
     if (!p) return;
-    if (p.qaliq <= 0) { el.value = ''; return toast(`${p.label}: anbarda qalmayıb`); }
-    const d = jobDraft();
-    const ex = d.items.find(i => i.nov === 'mal' && i.product_id === p.product_id);
-    if (ex) ex.miqdar = String(num(ex.miqdar) + 1);
-    else d.items.push({ nov: 'mal', product_id: p.product_id, ad: p.label, miqdar: p.vahid === 'litr' ? '4' : '1', qiymet: String(p.tovsiye_qiymet) });
-    S.editing = false; return render();
+    el.value = '';
+    return addToJob(p);
   }
   if (el.dataset.prodfilter !== undefined) { const q = el.value.toLowerCase(); const box = $app.querySelector('[data-prodlist]'); if (box) box.innerHTML = prodItems(S.products.filter(p => p.label.toLowerCase().includes(q))); return; }
   if (S.view === 'cars' && el.closest('[data-form="carSearch"]')) {
@@ -1606,6 +1621,7 @@ $app.addEventListener('input', e => {
   if (el.dataset.bind) {
     d[el.dataset.bind] = el.value;
     if (el.dataset.bind === 'novbeti_km') d.kmTouched = true;
+    if (el.dataset.bind === 'haqq') d.haqqTouched = true;
     if (el.dataset.bind === 'km' && !d.kmTouched) {
       const t = jobCalc(d), nk = $app.querySelector('[data-bind="novbeti_km"]');
       d.novbeti_km = d.km && t.hasOil ? String(num(d.km) + (num(S.settings.interval_km) || 10000)) : '';
@@ -1646,6 +1662,16 @@ $app.addEventListener('change', e => {
   }
 });
 
+/** Malı işə əlavə edir (siyahıdan seçəndə və ya barkod oxunanda). Eyni mal ikinci dəfə gələndə sayı artır. */
+function addToJob(p) {
+  if (p.qaliq <= 0) return toast(`${p.label}: anbarda qalmayıb`);
+  const d = jobDraft();
+  const ex = d.items.find(i => i.nov === 'mal' && i.product_id === p.product_id);
+  if (ex) ex.miqdar = String(num(ex.miqdar) + 1);
+  else d.items.push({ nov: 'mal', product_id: p.product_id, ad: p.label, miqdar: p.vahid === 'litr' ? '4' : '1', qiymet: String(p.tovsiye_qiymet) });
+  S.editing = false; render();
+}
+
 async function saveJob() {
   const d = jobDraft();
   if (!d.car) throw new Error('Maşın seçin');
@@ -1661,12 +1687,88 @@ async function saveJob() {
     if (it.nov === 'temir' && !String(it.ad).trim()) throw new Error('Təmir işinin adını yazın');
   }
   if (t.borc > 0 && !confirm(`${money(t.borc)} ödənilmir və borc kimi qalacaq. Davam edək?`)) return;
-  const job = { car_id: d.car.car_id, km: d.km, nagd: d.nagd, kart: d.kart, novbeti_km: d.novbeti_km, novbeti_ay: d.novbeti_ay, qeyd: d.qeyd,
+  const job = { car_id: d.car.car_id, km: d.km, nagd: d.nagd, kart: d.kart, novbeti_km: d.novbeti_km, novbeti_ay: d.novbeti_ay, qeyd: d.qeyd, usta_haqqi: t.usta,
     items: d.items.map(i => ({ nov: i.nov, product_id: i.product_id, ad: i.ad, miqdar: i.miqdar, qiymet: i.qiymet })) };
   const r = await api('saveJob', { job });
   S.draft = null; S.history = [];
   loadBoot(true).catch(() => {});
   go('receipt', { data: r, fresh: true }, false);
+}
+
+// ------------------------------------------------------------- Barkod: skaner və kamera
+// Skaner (USB və ya Bluetooth) klaviatura kimi işləyir: rəqəmləri çox sürətlə yazır və sonda Enter basır.
+// İnsan bu sürətlə yaza bilmir. Ona görə sürətli yazı + Enter = barkod. Hansı sahə aktiv olsa da, barkod həmin sahəyə düşmür.
+const SCAN = { buf: '', last: 0, el: null, val: null };
+const SCAN_GAP = 60;       // ms: simvollar arasında maksimum fasilə
+const SCAN_MIN = 6;        // ən qısa barkod
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  const now = performance.now(), gap = now - SCAN.last;
+  if (e.key === 'Enter') {
+    const code = SCAN.buf; SCAN.buf = '';
+    if (code.length < SCAN_MIN || gap > SCAN_GAP) return;
+    e.preventDefault(); e.stopPropagation();
+    const el = SCAN.el;
+    if (el && el.dataset && el.dataset.barcode !== undefined) { el.value = code; return; }   // barkod sahəsi: kod sahədə qalır
+    // Başqa sahə (məs. km): skanerin yazdığı kod sahədən geri silinir, usta yazdığı qalır
+    if (el && 'value' in el && typeof el.value === 'string') {
+      const v = el.value;
+      if (v.endsWith(code)) el.value = v.slice(0, -code.length); else if (SCAN.val !== null) el.value = SCAN.val;
+      if (el.value !== v) el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    return onScan(code);
+  }
+  if (e.key.length !== 1) { SCAN.buf = ''; return; }
+  if (gap > SCAN_GAP) { SCAN.buf = ''; SCAN.el = document.activeElement; SCAN.val = SCAN.el && 'value' in SCAN.el ? SCAN.el.value : null; }
+  SCAN.buf += e.key; SCAN.last = now;
+}, true);
+
+const byBarcode = code => S.products.find(p => p.barkod && p.barkod === String(code).replace(/\s+/g, ''));
+async function onScan(code) {
+  code = String(code).replace(/\s+/g, '');
+  if (navigator.vibrate) navigator.vibrate(60);
+  if (S.view === 'productForm') { const f = $app.querySelector('[data-barcode]'); if (f) { f.value = code; toast('Barkod oxundu', true); } return; }
+  if (!S.user) return;
+  if (!S.products.length) await loadBoot().catch(() => {});
+  const p = byBarcode(code);
+  if (S.view === 'job') return p ? addToJob(p) : toast(`Bu barkodla mal tapılmadı: ${code}`);
+  if (S.view === 'purchaseForm') { const f = $app.querySelector('form[data-form="purchase"] [name="product"]'); if (p && f) { f.value = p.label; return; } return toast(`Bu barkodla mal tapılmadı: ${code}`); }
+  if (isAdmin() && S.view === 'products') return p ? go('productForm', { product: p }) : go('productForm', { product: { nov: 'yag', vahid: 'qab', aktiv: true, barkod: code } });
+  if (p) return toast(`${p.label} · qalıq ${grp(p.qaliq, 2)} · ${money(p.tovsiye_qiymet)}`, true);
+  toast(`Bu barkodla mal tapılmadı: ${code}`);
+}
+
+// Kamera ilə oxumaq: telefonun öz barkod tanıma funksiyası (Android Chrome). Olmayan cihazda düymə görünmür.
+const camOk = () => 'BarcodeDetector' in window && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+const camBtn = () => camOk() ? `<button type="button" class="icon-btn" data-act="camScan" aria-label="Kamera ilə oxu" title="Kamera ilə oxu" style="width:48px;height:48px;border-radius:14px">${ic('scan', 22)}</button>` : '';
+async function openCamera() {
+  const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'qr_code', 'data_matrix'];
+  let det, stream;
+  try {
+    const sup = await BarcodeDetector.getSupportedFormats();
+    det = new BarcodeDetector({ formats: FORMATS.filter(f => sup.includes(f)) });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
+  } catch (e) { return toast(e && e.name === 'NotAllowedError' ? 'Kameraya icazə verilmədi' : 'Kamera açılmadı'); }
+  const box = document.createElement('div');
+  box.className = 'cam'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Barkod');
+  box.innerHTML = `<div class="cam-box"><video playsinline muted autoplay></video><div class="cam-line"></div></div><span class="cam-hint">Barkodu çərçivəyə tutun</span><button class="btn" data-camclose>Bağla</button>`;
+  translateDom(box);
+  document.body.appendChild(box);
+  const video = box.querySelector('video'); video.srcObject = stream;
+  let done = false;
+  const close = () => { done = true; stream.getTracks().forEach(t => t.stop()); box.remove(); };
+  box.querySelector('[data-camclose]').onclick = close;
+  const tick = async () => {
+    if (done) return;
+    try {
+      if (video.readyState >= 2) {
+        const r = await det.detect(video);
+        if (r.length && r[0].rawValue) { close(); return onScan(r[0].rawValue); }
+      }
+    } catch (e) { /* növbəti kadr */ }
+    setTimeout(tick, 180);
+  };
+  tick();
 }
 
 // ------------------------------------------------------------- Start

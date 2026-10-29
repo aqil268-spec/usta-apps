@@ -299,10 +299,24 @@ const I18N_DICT = {
   'Link ləğv edilsin? Təchizatçı onu aça bilməyəcək.': ['Cancel the link? The supplier will not be able to open it.', 'Отменить ссылку? Поставщик не сможет её открыть.'],
   'Limit üçün 1 və ya daha böyük rəqəm yazın': ['Enter 1 or a larger number for the limit', 'Введите для лимита 1 или больше'],
   'Limit': ['Limit', 'Лимит'],
+  'Barkod': ['Barcode', 'Штрихкод'], 'Skanerlə oxudun və ya yazın': ['Scan or type', 'Отсканируйте или введите'],
+  'Yağdəyişmə haqqı (₼)': ['Oil change fee (₼)', 'Оплата за замену масла (₼)'],
+  'Bu mal işə əlavə olunanda bu məbləğ çekə "usta haqqı" kimi yazılır və ustaya çatır. Usta çekdə onu dəyişə və ya silə bilər.': ['When this item is added to a job, this amount goes on the receipt as the mechanic fee and is paid to the mechanic. The mechanic can change or delete it on the receipt.', 'Когда товар добавляют в работу, эта сумма попадает в чек как оплата мастера и достаётся мастеру. Мастер может изменить или удалить её в чеке.'],
+  'Usta haqqı (yağdəyişmə)': ['Mechanic fee (oil change)', 'Оплата мастера (замена масла)'],
+  'Malın standart haqqı. Lazım olsa, dəyişin və ya silin.': ['Standard fee of the item. Change or delete it if needed.', 'Стандартная оплата товара. При необходимости измените или удалите.'],
+  'Malda haqq yazılmayıb. Lazımdırsa, məbləği yazın.': ['No fee set on the item. Enter an amount if needed.', 'У товара нет оплаты. Введите сумму, если нужно.'],
+  'Dəyişdirilib. Standart:': ['Changed. Standard:', 'Изменено. Стандарт:'], 'Standarta qaytar': ['Reset to standard', 'Вернуть стандарт'],
+  'Mal axtar və ya barkodu oxudun': ['Search an item or scan its barcode', 'Найдите товар или отсканируйте штрихкод'],
+  'Kamera ilə oxu': ['Scan with camera', 'Сканировать камерой'], 'Barkodu çərçivəyə tutun': ['Hold the barcode inside the frame', 'Наведите штрихкод в рамку'],
+  'Bağla': ['Close', 'Закрыть'], 'Kameraya icazə verilmədi': ['Camera permission denied', 'Нет доступа к камере'], 'Kamera açılmadı': ['Camera did not open', 'Камера не открылась'],
+  'Barkod oxundu': ['Barcode scanned', 'Штрихкод считан'],
 };
 
 // Dəyişən hissəsi olan mətnlər: [nümunə, EN, RU]
 const I18N_PAT = [
+  [/^Bu barkodla mal tapılmadı: (.+)$/, m => `No item with this barcode: ${m[1]}`, m => `Товар с этим штрихкодом не найден: ${m[1]}`],
+  [/^(.+) · qalıq (.+) · (.+)$/, m => `${m[1]} · stock ${m[2]} · ${m[3]}`, m => `${m[1]} · остаток ${m[2]} · ${m[3]}`],
+  [/^(.+) · (Usta|Admin)( · kassa)?$/, m => `${m[1]} · ${m[2] === 'Usta' ? 'Mechanic' : 'Admin'}${m[3] ? ' · cash desk' : ''}`, m => `${m[1]} · ${m[2] === 'Usta' ? 'Мастер' : 'Админ'}${m[3] ? ' · касса' : ''}`],
   [/^(\d+) saat · (.+)-dək$/, m => `${m[1]} h · until ${m[2]}`, m => `${m[1]} ч · до ${m[2]}`],
   [/^(\d+) dəfə · (\d+) qalıb$/, m => `${m[1]} times · ${m[2]} left`, m => `${m[1]} раз · осталось ${m[2]}`],
   [/^(.+) linki açır və yalnız öz gətirdiyi malların qalığını görür\. Qiymət, borc və başqa məlumat görünmür\. Giriş və şifrə lazım deyil\.$/, m => `${m[1]} opens the link and sees only the stock of the goods they supplied. Prices, debt and other data are not shown. No sign-in or password is needed.`, m => `${m[1]} открывает ссылку и видит только остатки своих товаров. Цены, долг и другие данные не видны. Вход и пароль не нужны.`],

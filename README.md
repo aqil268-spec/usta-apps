@@ -47,6 +47,8 @@ Yağ dəyişmə və təmir servisi üçün mobil tətbiq (PWA). Usta işləri ya
 
 - Məcburi: `product_id` (təkrarlanmayan), `marka`, `vahid` (`qab` və ya `litr`), `aktiv` (`1`).
 - `nov`: `yag`, `filtr` və ya `diger`.
+- `barkod`: istəyə bağlı, təkrarlanmamalıdır. Sütun mətn formatında olmalıdır (öndəki sıfırlar itməsin).
+- `deyisme_haqqi`: yağdəyişmə (usta) haqqı, ₼. Mal işə əlavə olunanda çekə yazılır, ustaya çatır. Usta çekdə dəyişə və ya silə bilər.
 - Stok `qaliq` sütunundan götürülmür. Stoku tətbiqdə **Alış** ilə daxil edin.
 
 ## Təhlükəsizlik
