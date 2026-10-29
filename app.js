@@ -61,7 +61,7 @@ function periods() {
 
 // ------------------------------------------------------------- API + keş
 const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'createCarLink', 'createSupplierLink', 'revokeSupplierLink', 'approveCarLink', 'rejectCarLink', 'cancelCarLink', 'linkSubmit', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
-  'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings'];
+  'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings', 'createOrder', 'orderSeen', 'cancelOrder', 'orderConfirm'];
 let MEM = {}; try { MEM = JSON.parse(localStorage.getItem('swr') || '{}'); } catch (e) { MEM = {}; }
 
 // Açılış ekranı: servisin adı (son yüklənmədən), ilk ekran hazır olanda və ən az 1,6 s keçəndə gizlənir
@@ -178,7 +178,7 @@ function syncCars(ver) {
 }
 
 // ------------------------------------------------------------- Naviqasiya
-const NO_RETURN = ['login', 'changePin', 'pinShow', 'publicCar', 'publicStock'];
+const NO_RETURN = ['login', 'changePin', 'pinShow', 'publicCar', 'publicStock', 'publicOrder'];
 const ROOTS = ['home', 'cars', 'kassa', 'me', 'products', 'more'];
 function go(view, params = {}, push = true) {
   if (push && !NO_RETURN.includes(S.view)) { S.history.push({ view: S.view, params: S.params }); if (S.history.length > 40) S.history.shift(); history.pushState({ app: 1 }, ''); }
@@ -212,7 +212,7 @@ const VIEWS = {};
 // Kompüterdə dar (forma, qəbz) ekranlar: mətn sətri çox uzanmasın deyə ortada dar sütun
 // Kompüterdə sol menyuda olan ekranlar: orada "Geri" düyməsi göstərilmir
 const SIDE_ROOTS = ['home', 'report', 'kassa', 'products', 'cars', 'income', 'stock', 'ustaDebts', 'requests', 'carLinks', 'suppliers', 'users', 'settings', 'me', 'more'];
-const NARROW = ['login', 'changePin', 'pinShow', 'receipt', 'cheque', 'carForm', 'productForm', 'purchaseForm', 'supplierForm', 'supplierPay', 'userForm', 'settings', 'payForm', 'linkNew', 'publicCar', 'publicStock'];
+const NARROW = ['login', 'changePin', 'pinShow', 'receipt', 'cheque', 'carForm', 'productForm', 'purchaseForm', 'supplierForm', 'supplierPay', 'userForm', 'settings', 'payForm', 'linkNew', 'publicCar', 'publicStock', 'publicOrder', 'orderNew'];
 // Dil seçimi: yuxarı sağda, sakit rəngdə
 const langSelect = () => `<select class="lang" data-lang data-noi18n aria-label="Dil / Language / Язык">${LANGS.map(([k, l]) => `<option value="${k}" ${LANG === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 // Sistem pəncərələri də seçilmiş dildə
@@ -221,7 +221,8 @@ window.confirm = m => _confirm(tr(m));
 window.prompt = (m, d) => _prompt(tr(m), d);
 
 async function render() {
-  if (S.publicStockToken) S.view = 'publicStock';
+  if (S.publicOrderToken) S.view = 'publicOrder';
+  else if (S.publicStockToken) S.view = 'publicStock';
   else if (S.publicToken) S.view = 'publicCar';
   else if (!S.token) S.view = 'login';
   const v = VIEWS[S.view] || VIEWS.home;
@@ -250,24 +251,25 @@ async function render() {
 // Hər bənd: [ekran, ikon, ad, telefonda görünür, kompüterdə görünür]. ['sec', ad] = kompüter menyusunda bölmə başlığı.
 function nav() {
   const b = S.boot || {}, admin = isAdmin();
-  const req = b.pending ? b.pending.close + b.pending.stock : 0, links = b.carLinks || 0, pend = req + links;
+  const ord = (b.pending && b.pending.orders) || 0;
+  const req = b.pending ? b.pending.close + b.pending.stock + ord : 0, links = b.carLinks || 0, pend = req + links;
   const badge = n => n ? `<span class="badge">${n}</span>` : '';
   const items = admin
     ? [['home', 'chart', 'Hesabat', 1, 1], ['kassa', 'wallet', 'Kassa', 1, 1], ['products', 'drop', 'Mallar', 1, 1], ['cars', 'car', 'Maşınlar', 0, 1],
        ['sec', 'Hesabatlar'], ['income', 'coins', 'Gəlir və xərc', 0, 1], ['stock', 'box', 'Stok', 0, 1], ['ustaDebts', 'wallet', 'Usta borcları', 0, 1],
        ['sec', 'İdarəetmə'], ['requests', 'inbox', 'Sorğular' + badge(req), 0, 1], ['carLinks', 'link', 'Maşın kartı linkləri' + badge(links), 0, 1],
-       ['suppliers', 'truck', 'Təchizatçılar', 0, 1], ['users', 'user', 'İstifadəçilər', 0, 1], ['settings', 'gear', 'Parametrlər', 0, 1],
+       ['suppliers', 'truck', 'Təchizatçılar' + badge(ord), 0, 1], ['users', 'user', 'İstifadəçilər', 0, 1], ['settings', 'gear', 'Parametrlər', 0, 1],
        ['more', 'more', 'Daha' + badge(pend), 1, 0]]
     : [['home', 'home', 'Əsas', 1, 1], ['cars', 'car', 'Maşınlar', 1, 1], ...(S.user.kassa ? [['kassa', 'wallet', 'Kassa', 1, 1]] : []),
        ['carLinks', 'link', 'Maşın kartı linkləri' + badge(links), 0, 1], ['me', 'user', 'Mən', 1, 1]];
   // Telefonda aktiv düymə
-  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more',
+  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more', orders: 'more', orderNew: 'more', orderDetail: 'more',
     requests: 'more', ustaDebts: 'more', carLinks: admin ? 'more' : 'cars', linkNew: admin ? 'more' : 'cars', debtList: admin ? 'more' : 'me', payForm: admin ? 'more' : 'me', users: 'more', userForm: 'more', settings: 'more', kassaHistory: 'kassa',
     productForm: 'products', purchaseForm: 'products', purchaseList: 'products' };
   // Kompüterdə aktiv bənd (hər bölmə öz bəndini işıqlandırır)
   const dmap = { carHistory: 'cars', carForm: 'cars', report: 'home', kassaHistory: 'kassa', productForm: 'products', purchaseForm: 'products', purchaseList: 'products',
     supplierForm: 'suppliers', supplierDetail: 'suppliers', supplierLinks: 'suppliers', supplierLinkLog: 'suppliers', supplierPay: 'suppliers', cheque: 'suppliers',
-    linkNew: 'carLinks', userForm: 'users', debtList: admin ? 'ustaDebts' : 'me', payForm: admin ? 'ustaDebts' : 'me' };
+    linkNew: 'carLinks', userForm: 'users', orders: 'suppliers', orderNew: 'suppliers', orderDetail: 'suppliers', debtList: admin ? 'ustaDebts' : 'me', payForm: admin ? 'ustaDebts' : 'me' };
   const cur = map[S.view] || S.view, curD = dmap[S.view] || S.view;
   const btns = items.map(([v, i, t, m, d]) => v === 'sec' ? `<div class="side-sec side-only">${i}</div>`
     : `<button data-tab="${v}" class="${m ? '' : 'side-only'} ${d ? '' : 'mob-only'} ${cur === v ? 'm-on' : ''} ${curD === v ? 'd-on' : ''}">${ic(i)}<span>${t}</span></button>`).join('');
@@ -920,7 +922,7 @@ VIEWS.report = async (p) => {
   return `
   <div class="between"><div><div class="muted">${longToday()}</div><h1>Hesabat</h1></div></div>
   ${blockBanner(b)}
-  ${pend.close || pend.stock ? `<div class="banner warn"><b>Yeni sorğular</b><span>${pend.close ? pend.close + ' kassa bağlama' : ''}${pend.close && pend.stock ? ' · ' : ''}${pend.stock ? pend.stock + ' alış' : ''}</span><button class="btn small" data-act="go" data-v="requests">Sorğulara bax</button></div>` : ''}
+  ${pend.close || pend.stock || pend.orders ? `<div class="banner warn"><b>Yeni sorğular</b><span>${[pend.close ? pend.close + ' kassa bağlama' : '', pend.stock ? pend.stock + ' alış' : '', pend.orders ? pend.orders + ' sifariş cavabı' : ''].filter(Boolean).join(' · ')}</span><button class="btn small" data-act="go" data-v="requests">Sorğulara bax</button></div>` : ''}
   ${presetSeg(key, 'home')}
   ${rangeForm(range[0], range[1], 'report')}
   <div class="cols"><div class="col">
@@ -1102,7 +1104,7 @@ VIEWS.supplierDetail = async (p) => {
       <div class="stat"><span>${b.borc >= 0 ? 'Borcum' : 'Avans'}</span><b style="color:${b.borc > 0 ? 'var(--danger)' : 'var(--ok)'}">${money(Math.abs(b.borc))}</b></div>
     </div>
     <button class="btn primary big" data-act="paySupplierForm">Ödə</button>
-    <button class="btn" data-act="supplierLinks">${ic('link', 18)}Stok linki</button>
+    <div class="grid2"><button class="btn" data-act="supplierOrders">${ic('box', 18)}Mal sifarişi</button><button class="btn" data-act="supplierLinks">${ic('link', 18)}Stok linki</button></div>
   </div>
   <h2>Mallar üzrə</h2>
   <div class="card scroll">${d.mallar.length ? `<table><tr><th>Mal</th><th class="r">Alınıb</th><th class="r">Satılıb</th><th class="r">Məbləğ</th><th class="r">Stok</th></tr>
@@ -1125,6 +1127,110 @@ VIEWS.supplierPay = (p) => `<h1>Təchizatçıya ödəniş</h1>
     <span class="muted">Nağd ödəniş kassadan azalır. Bank köçürməsi kassaya təsir etmir. Borcdan çox ödəniş avans kimi qalır.</span>
     <button class="btn primary big" type="submit">Ödə və çek yarat</button>
   </form>`;
+
+// ------------------------------------------------------------- Təchizatçıya mal sifarişi (link ilə)
+const orderUrl = token => location.origin + location.pathname + '#sifaris=' + token;
+const orderText = (o, url) => `Salam! ${S.settings.servis_adi || 'Servis'}: mal sifarişi №${o.nomre}. Linkə baxın. Dəyişiklik yoxdursa, "Təsdiq et" basın. Fərqli say və ya qiymət varsa, yalnız həmin sətri yazın: ${url}`;
+const orderPill = st => ({ ok: '<span class="pill">Cavab gözlənilir</span>', tesdiq: '<span class="pill ok">Təsdiqlənib</span>', legv: '<span class="pill muted-pill">Ləğv edilib</span>', bitib: '<span class="pill muted-pill">Vaxtı bitib</span>' }[st] || '');
+const qtyTxt = (q, v) => `<span>${grp(q, 2)} ${esc(v || '')}</span>`;
+
+VIEWS.orders = async (p) => {
+  const list = await cget('orders', { supplier_id: p.supplier_id });
+  return `<div class="between"><div><div class="muted" data-noi18n>${esc(p.ad || '')}</div><h1>Mal sifarişləri</h1></div><button class="btn small primary" data-act="newOrder">${ic('plus', 18)}Yeni</button></div>
+  <span class="muted">Sifarişi linklə göndərin. Təchizatçı linki açır, lazım olsa say və qiyməti dəyişir və təsdiq edir.</span>
+  <div class="list">${list.length ? list.map(o => `
+    <button class="item" data-act="openOrder" data-id="${esc(o.order_id)}"><span class="grow"><span><span>Sifariş</span> №${esc(o.nomre)}${o.state === 'tesdiq' && !o.baxildi ? '<span class="badge">!</span>' : ''}</span>
+      <span class="muted">${fullDT(o.yaradilma)} · ${o.mal_sayi} <span>mal</span>${o.state === 'tesdiq' ? (o.deyisiklik ? ` · ${o.deyisiklik} <span>dəyişiklik</span>` : ' · <span>dəyişiklik yoxdur</span>') : ''}</span></span>${orderPill(o.state)}</button>`).join('') : '<div class="empty">Sifariş yoxdur.</div>'}</div>`;
+};
+
+// Yeni sifariş: malları seçin, sayı yazın. Qiymət boşdursa, bu təchizatçıdan son alış qiyməti yazılır.
+VIEWS.orderNew = async (p) => {
+  if (!S.products.length || !('maya' in S.products[0])) S.products = await cget('products');
+  if (!S.order || S.order.supplier_id !== p.supplier_id) S.order = { supplier_id: p.supplier_id, rows: [], qeyd: '' };
+  const o = S.order, has = id => o.rows.some(r => r.product_id === id);
+  const own = (p.pids || []).filter(id => !has(id) && prodById(id).aktiv);
+  const low = S.products.filter(x => x.aktiv && x.qaliq <= stockLimit(x) && !has(x.product_id));
+  return `<div><div class="muted" data-noi18n>${esc(p.ad || '')}</div><h1>Yeni sifariş</h1></div>
+  <div class="card">
+    ${o.rows.length ? o.rows.map((r, ix) => { const x = prodById(r.product_id); return `
+    <div class="pl">
+      <div class="between"><span style="font-weight:500" data-noi18n>${esc(x.label || '')}</span><button class="icon-btn" data-act="orderDel" data-ix="${ix}" aria-label="Sil">${ic('x', 18)}</button></div>
+      <div class="grid2">
+        <label class="field">Say (${esc(x.vahid === 'litr' ? 'L' : 'ədəd')})<input data-orow="${ix}" data-of="miqdar" inputmode="decimal" value="${esc(r.miqdar)}" placeholder="məs. 10"></label>
+        <label class="field">Qiymət (₼)<input data-orow="${ix}" data-of="qiymet" inputmode="decimal" value="${esc(r.qiymet)}" placeholder="son alış qiyməti"></label>
+      </div>
+      <span class="muted"><span>Anbarda:</span> ${qtyTxt(x.qaliq, x.vahid)}</span>
+    </div>`; }).join('') : '<div class="empty">Mal seçilməyib.</div>'}
+    <div class="row" style="align-items:flex-end"><label class="field" style="flex:1">Mal əlavə et (və ya barkodu oxudun)<input data-orderadd list="dl-oprod" placeholder="Marka, model, özlülük..." autocomplete="off"></label>${camBtn()}</div>
+    <datalist id="dl-oprod">${S.products.filter(x => x.aktiv && !has(x.product_id)).map(x => `<option value="${esc(x.label)}"></option>`).join('')}</datalist>
+    ${own.length || low.length ? `<div class="row" style="flex-wrap:wrap;gap:8px">${own.length ? `<button class="btn small" data-act="orderAddOwn">${ic('plus', 16)}<span>Bu təchizatçının malları</span> (${own.length})</button>` : ''}${low.length ? `<button class="btn small" data-act="orderAddLow">${ic('plus', 16)}<span>Az qalanlar</span> (${low.length})</button>` : ''}</div>` : ''}
+  </div>
+  <label class="field">Təchizatçıya qeyd<textarea data-onote placeholder="${esc(tr('istəyə bağlı'))}">${esc(o.qeyd)}</textarea></label>
+  <button class="btn primary big" data-act="orderCreate" ${o.rows.length ? '' : 'disabled'}>${ic('link', 20)}Sifariş linkini yarat</button>
+  <span class="muted">Link 7 gün işləyir və bir dəfə təsdiq olunur.</span>`;
+};
+function orderAdd(p) {
+  if (!p) return;
+  const o = S.order; if (!o) return;
+  if (o.rows.some(r => r.product_id === p.product_id)) return toast(`${p.label}: siyahıda var`);
+  o.rows.push({ product_id: p.product_id, miqdar: '', qiymet: '' });
+  render();
+}
+
+VIEWS.orderDetail = async (p) => {
+  const o = p.data || (S.params.data = await api('orderDetail', { order_id: p.order_id }));
+  if (o.state === 'tesdiq' && !o.baxildi) { o.baxildi = true; api('orderSeen', { order_id: o.order_id }, true).then(() => loadBoot(true)).catch(() => {}); }
+  const done = o.state === 'tesdiq';
+  const cell = (v, old, ch, f) => ch && v !== old ? `<b style="color:var(--accent)">${f(v)}</b><br><s class="muted">${f(old)}</s>` : f(v);
+  return `<div class="between"><div><div class="muted" data-noi18n>${esc(o.techizatci)}</div><h1><span>Sifariş</span> №${esc(o.nomre)}</h1></div>${orderPill(o.state)}</div>
+  ${o.state === 'ok' && o.token ? `<div class="card" style="border-color:var(--accent)">
+    <b>Link hazırdır</b>
+    <div class="doc" style="word-break:break-all;font-size:13px;user-select:all" data-noi18n>${esc(orderUrl(o.token))}</div>
+    <div class="grid2"><button class="btn small primary" data-act="osSend">${ic('share', 18)}WhatsApp</button><button class="btn small" data-act="osCopy">Kopyala</button></div>
+    <span class="muted">Link ${msDT(o.bitme)}-dək işləyir.</span>
+  </div>` : ''}
+  ${o.qeyd ? `<div class="banner info"><b>Qeyd</b><span data-noi18n>${esc(o.qeyd)}</span></div>` : ''}
+  ${done ? `<div class="banner ${o.deyisiklik ? 'warn' : 'ok'}"><b>${o.deyisiklik ? `${o.deyisiklik} sətirdə dəyişiklik var` : 'Təchizatçı dəyişiklik etmədən təsdiqləyib'}</b><span>${fullDT(o.tesdiq_saati)}${o.cihaz ? ' · ' + esc(o.cihaz) : ''}</span>${o.cavab_qeyd ? `<span data-noi18n>«${esc(o.cavab_qeyd)}»</span>` : ''}</div>` : ''}
+  <div class="card scroll"><table>
+    <tr><th>Mal</th><th class="r">Say</th><th class="r">Qiymət</th>${done ? '<th class="r">Göndərəcək</th><th class="r">Qiymət</th>' : ''}</tr>
+    ${o.items.map(i => `<tr><td data-noi18n>${esc(i.ad)}</td><td class="r">${qtyTxt(i.miqdar, i.vahid)}</td><td class="r">${money(i.qiymet)}</td>
+      ${done ? `<td class="r">${i.t_miqdar === 0 ? '<span class="pill bad">Yoxdur</span>' : cell(i.t_miqdar, i.miqdar, i.deyisib, v => qtyTxt(v, i.vahid))}</td><td class="r">${cell(i.t_qiymet, i.qiymet, i.deyisib, money)}</td>` : ''}</tr>`).join('')}
+    <tr><td><b>Cəmi</b></td><td></td><td class="r"><b>${money(o.cem)}</b></td>${done ? `<td></td><td class="r"><b>${money(o.t_cem)}</b></td>` : ''}</tr>
+  </table></div>
+  ${o.state === 'ok' ? `<div class="grid2"><button class="btn" data-act="orderRefresh">Yenilə</button><button class="btn danger" data-act="osCancel">Ləğv et</button></div>` : ''}`;
+};
+
+// Təchizatçının gördüyü səhifə (girişsiz)
+VIEWS.publicOrder = async (p) => {
+  const r = p.r || (p.r = await api('orderView', { k: S.publicOrderToken }));
+  const msg = { yox: 'Link düzgün deyil.', legv: 'Bu sifariş ləğv edilib.', bitib: 'Linkin vaxtı bitib.' }[r.state];
+  if (msg) return `<div class="card" style="margin-top:24px;gap:12px;text-align:center;align-items:center">${logoMark(48)}<h1>${msg}</h1><span class="muted">Servislə əlaqə saxlayın.</span></div>`;
+  S.settings = { servis_adi: r.servis, telefon: r.telefon };
+  const head = `<div style="display:flex;flex-direction:column;gap:6px">${logoFull(r.servis)}<span class="muted" style="text-align:center">${esc(r.telefon || '')}</span></div>
+  <div><div class="muted"><span data-noi18n>${esc(r.techizatci)}</span> · ${fullDT(r.tarix)}</div><h1><span>Mal sifarişi</span> №${esc(r.nomre)}</h1></div>
+  ${r.qeyd ? `<div class="banner info"><b>Servisin qeydi</b><span data-noi18n>${esc(r.qeyd)}</span></div>` : ''}`;
+  if (r.state === 'tesdiq') {
+    return `${head}
+    <div class="banner ok"><b>Sifariş təsdiqlənib. Təşəkkür edirik!</b><span>${fullDT(r.tesdiq_saati)}</span>${r.cavab_qeyd ? `<span data-noi18n>«${esc(r.cavab_qeyd)}»</span>` : ''}</div>
+    <div class="list">${r.items.map(i => `<div class="item" style="cursor:default"><span class="grow"><span data-noi18n>${esc(i.ad)}</span><span class="muted">${i.t_miqdar === 0 ? '<span>Göndərilmir</span>' : `${qtyTxt(i.t_miqdar, i.vahid)} · ${money(i.t_qiymet)}`}</span></span>${i.deyisib ? '<span class="pill">Dəyişib</span>' : '<span class="pill ok">OK</span>'}</div>`).join('')}</div>
+    ${r.telefon ? `<a class="btn" style="text-decoration:none" href="tel:${esc(String(r.telefon).replace(/[^\d+]/g, ''))}">Servisə zəng et</a>` : ''}`;
+  }
+  return `${head}
+  <div class="banner info"><b>Hər şey düzgündürsə, sadəcə aşağıdakı "Təsdiq et" düyməsini basın.</b><span>Say və ya qiymət fərqlidirsə, yalnız həmin sətirdə yazın. Göndərə bilmədiyiniz mal üçün "Yoxdur" basın.</span></div>
+  <form class="list" data-form="publicOrder" style="display:flex;flex-direction:column;gap:10px">
+    ${r.items.map(i => `
+    <div class="card" style="gap:10px;padding:12px">
+      <div class="between"><span style="font-weight:500" data-noi18n>${esc(i.ad)}</span><button type="button" class="btn small" data-onone="${esc(i.oitem_id)}">Yoxdur</button></div>
+      <span class="muted"><span>İstənilən:</span> ${qtyTxt(i.miqdar, i.vahid)} · ${money(i.qiymet)}</span>
+      <div class="grid2">
+        <label class="field">Göndərəcəyim say<input name="q_${esc(i.oitem_id)}" inputmode="decimal" placeholder="${esc(grp(i.miqdar, 2))}"></label>
+        <label class="field">Qiymət (₼)<input name="p_${esc(i.oitem_id)}" inputmode="decimal" placeholder="${esc(grp(i.qiymet, 2))}"></label>
+      </div>
+    </div>`).join('')}
+    <label class="field">Qeyd<textarea name="qeyd" placeholder="${esc(tr('istəyə bağlı'))}"></textarea></label>
+    <button class="btn primary big" type="submit">${ic('check', 22)}Təsdiq et</button>
+  </form>`;
+};
 
 // ------------------------------------------------------------- Təchizatçı üçün stok linki
 const stockUrl = token => location.origin + location.pathname + '#stok=' + token;
@@ -1240,6 +1346,8 @@ VIEWS.requests = async () => {
       <div class="between"><span class="grow" style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-weight:500;font-size:14px">${esc(x.ad)}</span><span class="muted">${esc(x.usta)} · ${esc(x.saat)}</span></span><span class="pill bad">${grp(x.qaliq, 2)} ${esc(x.vahid)}</span></div>
       <div class="grid2"><button class="btn small primary" data-act="buyFromReq" data-id="${esc(x.product_id)}" data-req="${esc(x.request_id)}">Alış qeyd et</button><button class="btn small" data-act="closeReq" data-id="${esc(x.request_id)}">Almıram, bağla</button></div>
     </div>`).join('') : '<div class="empty">Yeni alış sorğusu yoxdur.</div>'}</div>
+  ${(r.orders || []).length ? `<h2>Təchizatçı cavabları</h2>
+  <div class="list">${r.orders.map(o => `<button class="item" data-act="openOrder" data-id="${esc(o.order_id)}"><span class="grow"><span data-noi18n>${esc(o.techizatci)}</span><span class="muted"><span>Sifariş</span> №${esc(o.nomre)} · ${fullDT(o.tesdiq_saati)}</span></span>${o.deyisiklik ? `<span class="pill">${o.deyisiklik} <span>dəyişiklik</span></span>` : '<span class="pill ok">Dəyişiklik yoxdur</span>'}</button>`).join('')}</div>` : ''}
   <h2>Kassa bağlama sorğuları</h2>
   <div class="list">${r.close.length ? r.close.map(x => `<button class="item" data-tab="kassa"><span class="grow"><span>${esc(x.usta)}</span><span class="muted">${fmtDate(x.tarix)} · ${esc(x.saat)}</span></span><span class="pill">Kassaya keç</span></button>`).join('') : '<div class="empty">Yeni sorğu yoxdur.</div>'}</div>`;
 };
@@ -1256,7 +1364,7 @@ VIEWS.more = async () => {
   const item = (v, i, t, sub, badge) => `<button class="item" data-act="go" data-v="${v}">${ic(i)}<span class="grow"><span>${t}${badge ? `<span class="badge">${badge}</span>` : ''}</span><span class="muted">${sub}</span></span></button>`;
   return `<div><div class="muted">${esc(S.user.telefon)}</div><h1>${esc(S.user.ad)}</h1></div>
   <div class="list">
-    ${item('requests', 'inbox', 'Sorğular', 'Alış və kassa bağlama', pend.close + pend.stock)}
+    ${item('requests', 'inbox', 'Sorğular', 'Alış, kassa bağlama, sifariş cavabları', pend.close + pend.stock + (pend.orders || 0))}
     ${item('carLinks', 'link', 'Maşın kartı linkləri', 'Müştərinin doldurduğu kartlar', b.carLinks || 0)}
     ${item('income', 'coins', 'Gəlir və xərc', 'Gəlir-xərc hesabatı')}
     ${item('stock', 'box', 'Stok', 'Qalıq, maya, satış dəyəri')}
@@ -1363,6 +1471,12 @@ $app.addEventListener('submit', e => {
         delete MEM[swrKey('supplierLinks', { supplier_id: S.params.supplier_id })];
         S.params.made = r.link_id; S.params.nov = 'yox'; toast('Link yaradıldı', true); return render();
       }
+      case 'publicOrder': {
+        const items = [...f.querySelectorAll('input[name^="q_"]')].map(q => { const id = q.name.slice(2); return { oitem_id: id, miqdar: q.value, qiymet: (f.querySelector(`[name="p_${id}"]`) || {}).value || '' }; });
+        S.params.r = await api('orderConfirm', { k: S.publicOrderToken, ua: navigator.userAgent, qeyd: d.qeyd || '', items });
+        if (S.params.r.state === 'tesdiq') toast('Təsdiq göndərildi. Təşəkkür edirik!', true);
+        window.scrollTo(0, 0); return render();
+      }
       case 'publicCar': {
         d.ferqli_nomre = !!f.ferqli_nomre.checked;
         const r = await api('linkSubmit', { k: S.publicToken, car: d });
@@ -1436,8 +1550,9 @@ function pickCarObj(car) {
 
 // ------------------------------------------------------------- Hadisələr: kliklər
 $app.addEventListener('click', e => {
-  const t = e.target.closest('[data-act],[data-tab],[data-fill],[data-preset],[data-movetype],[data-paynov],[data-payfill],[data-limnov]');
+  const t = e.target.closest('[data-act],[data-tab],[data-fill],[data-preset],[data-movetype],[data-paynov],[data-payfill],[data-limnov],[data-onone]');
   if (!t) return;
+  if (t.dataset.onone) { const q = $app.querySelector(`[name="q_${t.dataset.onone}"]`); if (q) { q.value = '0'; q.focus(); } return; }
   if (t.dataset.tab) return tab(t.dataset.tab);
   if (t.dataset.fill) {
     const d = jobDraft(), c = jobCalc(d);
@@ -1497,6 +1612,29 @@ $app.addEventListener('click', e => {
         toast('Link ləğv edildi', true); return render();
       }
       case 'stockRefresh': S.params.r = null; return render();
+      case 'supplierOrders': { const d = S.params.detail; return go('orders', { supplier_id: d.supplier.supplier_id, ad: d.supplier.ad, telefon: d.supplier.telefon, pids: d.mallar.map(m => m.product_id) }); }
+      case 'newOrder': S.order = null; return go('orderNew', { supplier_id: S.params.supplier_id, ad: S.params.ad, telefon: S.params.telefon, pids: S.params.pids });
+      case 'openOrder': return go('orderDetail', { order_id: id });
+      case 'orderDel': S.order.rows.splice(+t.dataset.ix, 1); return render();
+      case 'orderAddOwn': (S.params.pids || []).forEach(pid => { const x = prodById(pid); if (x.aktiv && !S.order.rows.some(r => r.product_id === pid)) S.order.rows.push({ product_id: pid, miqdar: '', qiymet: '' }); }); return render();
+      case 'orderAddLow': S.products.filter(x => x.aktiv && x.qaliq <= stockLimit(x)).forEach(x => { if (!S.order.rows.some(r => r.product_id === x.product_id)) S.order.rows.push({ product_id: x.product_id, miqdar: '', qiymet: '' }); }); return render();
+      case 'orderCreate': {
+        const o = S.order;
+        const bad = o.rows.find(r => !(num(r.miqdar) > 0));
+        if (bad) throw new Error(`${prodById(bad.product_id).label}: sayı yazın`);
+        const r = await api('createOrder', { supplier_id: o.supplier_id, qeyd: o.qeyd, items: o.rows.map(x => ({ product_id: x.product_id, miqdar: x.miqdar, qiymet: x.qiymet })) });
+        S.order = null; toast('Sifariş yaradıldı. Linki göndərin.', true);
+        return go('orderDetail', { order_id: r.order_id, data: r }, false);
+      }
+      case 'orderRefresh': S.params.data = null; return render();
+      case 'osSend': { const o = S.params.data; if (!o || !o.token) return; window.open(`https://wa.me/${waPhone(o.telefon)}?text=${encodeURIComponent(orderText(o, orderUrl(o.token)))}`, '_blank'); return; }
+      case 'osCopy': {
+        const o = S.params.data; if (!o || !o.token) return;
+        try { await navigator.clipboard.writeText(orderUrl(o.token)); toast('Link kopyalandı', true); }
+        catch (e) { toast('Kopyalamaq alınmadı. Linkə basıb saxlayın və kopyalayın.'); }
+        return;
+      }
+      case 'osCancel': { if (!confirm('Sifariş ləğv edilsin? Link işləməyəcək.')) return; S.params.data = await api('cancelOrder', { order_id: S.params.data.order_id }); toast('Sifariş ləğv edildi', true); return render(); }
       case 'shareLink': {
         const l = S.params.link, text = linkText(l.url);
         if (navigator.share && !l.telefon) { try { await navigator.share({ text }); } catch (e) { /* bağlandı */ } return; }
@@ -1602,6 +1740,9 @@ $app.addEventListener('input', e => {
     el.value = '';
     return addToJob(p);
   }
+  if (el.dataset.orderadd !== undefined) { const p = S.products.find(x => x.label === el.value.trim()); if (p) { el.value = ''; orderAdd(p); } return; }
+  if (el.dataset.orow !== undefined) { const r = S.order && S.order.rows[+el.dataset.orow]; if (r) r[el.dataset.of] = el.value; return; }
+  if (el.dataset.onote !== undefined) { if (S.order) S.order.qeyd = el.value; return; }
   if (el.dataset.prodfilter !== undefined) { const q = el.value.toLowerCase(); const box = $app.querySelector('[data-prodlist]'); if (box) box.innerHTML = prodItems(S.products.filter(p => p.label.toLowerCase().includes(q))); return; }
   if (S.view === 'cars' && el.closest('[data-form="carSearch"]')) {
     const pick = S.params.pick, list = filterCars(S.cars || [], el.value);
@@ -1732,6 +1873,7 @@ async function onScan(code) {
   if (!S.products.length) await loadBoot().catch(() => {});
   const p = byBarcode(code);
   if (S.view === 'job') return p ? addToJob(p) : toast(`Bu barkodla mal tapılmadı: ${code}`);
+  if (S.view === 'orderNew') return p ? orderAdd(p) : toast(`Bu barkodla mal tapılmadı: ${code}`);
   if (S.view === 'purchaseForm') { const f = $app.querySelector('form[data-form="purchase"] [name="product"]'); if (p && f) { f.value = p.label; return; } return toast(`Bu barkodla mal tapılmadı: ${code}`); }
   if (isAdmin() && S.view === 'products') return p ? go('productForm', { product: p }) : go('productForm', { product: { nov: 'yag', vahid: 'qab', aktiv: true, barkod: code } });
   if (p) return toast(`${p.label} · qalıq ${grp(p.qaliq, 2)} · ${money(p.tovsiye_qiymet)}`, true);
@@ -1795,6 +1937,9 @@ document.addEventListener('visibilitychange', ping);
   // Təchizatçı üçün stok linki: #stok=AÇAR (girişsiz, yalnız oxumaq)
   const sk = location.hash.match(/^#stok=([A-Za-z0-9_-]{40,60})$/);
   if (sk) { S.publicStockToken = sk[1]; S.view = 'publicStock'; S.params = {}; return render(); }
+  // Təchizatçıya mal sifarişi: #sifaris=AÇAR (girişsiz, bir dəfə təsdiq)
+  const so = location.hash.match(/^#sifaris=([A-Za-z0-9_-]{40,60})$/);
+  if (so) { S.publicOrderToken = so[1]; S.view = 'publicOrder'; S.params = {}; return render(); }
   if (!S.token) { S.view = 'login'; return render(); }
   try { await loadBoot(); S.view = 'home'; render(); warm(); }
   catch (e) { render(); }

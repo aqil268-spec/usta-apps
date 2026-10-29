@@ -1,5 +1,5 @@
 // Sadə service worker: ekran fayllarını keşləyir, API sorğularına toxunmur.
-const CACHE = 'aqqa-v20';
+const CACHE = 'aqqa-v21';
 const FILES = ['./', './index.html', './i18n.js', './app.js', './config.js', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 const EXTRA = ['./lib/html2canvas.min.js', './lib/jspdf.umd.min.js']; // olmasa da quraşdırma dayanmır
 
