@@ -208,6 +208,10 @@ function logout(server, why) {
 
 // ------------------------------------------------------------- Render
 const VIEWS = {};
+// Kompüterdə dar (forma, qəbz) ekranlar: mətn sətri çox uzanmasın deyə ortada dar sütun
+// Kompüterdə sol menyuda olan ekranlar: orada "Geri" düyməsi göstərilmir
+const SIDE_ROOTS = ['home', 'report', 'kassa', 'products', 'cars', 'income', 'stock', 'ustaDebts', 'requests', 'carLinks', 'suppliers', 'users', 'settings', 'me', 'more'];
+const NARROW = ['login', 'changePin', 'pinShow', 'receipt', 'cheque', 'carForm', 'productForm', 'purchaseForm', 'supplierForm', 'supplierPay', 'userForm', 'settings', 'payForm', 'linkNew', 'publicCar', 'publicStock'];
 // Dil seçimi: yuxarı sağda, sakit rəngdə
 const langSelect = () => `<select class="lang" data-lang data-noi18n aria-label="Dil / Language / Язык">${LANGS.map(([k, l]) => `<option value="${k}" ${LANG === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 // Sistem pəncərələri də seçilmiş dildə
@@ -223,30 +227,55 @@ async function render() {
   try {
     const html = await v(S.params);
     if (html === null) return;
-    const top = `<div class="topbar">${showBack() ? `<button class="icon-btn" data-act="back" aria-label="Geri">${ic('back', 20)}</button>` : '<span></span>'}${langSelect()}</div>`;
+    const sideRoot = SIDE_ROOTS.includes(S.view) && !S.params.pick;
+    const top = `<div class="topbar">${showBack() ? `<button class="icon-btn ${sideRoot ? 'mob-only' : ''}" data-act="back" aria-label="Geri">${ic('back', 20)}</button>` : '<span></span>'}${langSelect()}</div>`;
     const warnOld = S.user && S.oldServer ? `<div class="banner bad"><b>Server köhnə versiyadadır</b><span>Apps Script-də yeni Code.gs-i yapışdırın, installTriggers funksiyasını bir dəfə işə salın və Deploy → Manage deployments → Edit → New version → Deploy edin.</span></div>` : '';
-    $app.innerHTML = `<main>${top}${warnOld}${html}</main>${S.user && !NO_RETURN.includes(S.view) ? nav() : ''}`;
+    const withNav = !!(S.user && !NO_RETURN.includes(S.view));
+    document.body.classList.toggle('side', withNav);
+    $app.innerHTML = `<main class="${NARROW.includes(S.view) ? 'narrow' : ''}">${top}${warnOld}${html}</main>${withNav ? nav() : ''}`;
     const f = $app.querySelector('[autofocus]'); if (f) f.focus();
     translateDom($app);
     hideSplash();
     if (v.after) v.after(S.params);
   } catch (e) {
+    document.body.classList.toggle('side', !!S.user);
     $app.innerHTML = `<main><div class="topbar"><span></span>${langSelect()}</div><div class="card"><b>Xəta</b><span class="muted">${esc(e.message)}</span><button class="btn" data-act="retry">Yenidən cəhd et</button></div></main>${S.user ? nav() : ''}`;
     translateDom($app);
     hideSplash();
   }
 }
 
+// Menyu. Telefonda: aşağıda 4–5 düymə. Kompüterdə (≥ 1024 px): solda tam menyu.
+// Hər bənd: [ekran, ikon, ad, telefonda görünür, kompüterdə görünür]. ['sec', ad] = kompüter menyusunda bölmə başlığı.
 function nav() {
-  const b = S.boot || {}, pend = (b.pending ? b.pending.close + b.pending.stock : 0) + (b.carLinks || 0);
-  const items = isAdmin()
-    ? [['home', 'chart', 'Hesabat'], ['kassa', 'wallet', 'Kassa'], ['products', 'drop', 'Mallar'], ['more', 'more', 'Daha' + (pend ? `<span class="badge">${pend}</span>` : '')]]
-    : [['home', 'home', 'Əsas'], ['cars', 'car', 'Maşınlar'], ...(S.user.kassa ? [['kassa', 'wallet', 'Kassa']] : []), ['me', 'user', 'Mən']];
+  const b = S.boot || {}, admin = isAdmin();
+  const req = b.pending ? b.pending.close + b.pending.stock : 0, links = b.carLinks || 0, pend = req + links;
+  const badge = n => n ? `<span class="badge">${n}</span>` : '';
+  const items = admin
+    ? [['home', 'chart', 'Hesabat', 1, 1], ['kassa', 'wallet', 'Kassa', 1, 1], ['products', 'drop', 'Mallar', 1, 1], ['cars', 'car', 'Maşınlar', 0, 1],
+       ['sec', 'Hesabatlar'], ['income', 'coins', 'Gəlir və xərc', 0, 1], ['stock', 'box', 'Stok', 0, 1], ['ustaDebts', 'wallet', 'Usta borcları', 0, 1],
+       ['sec', 'İdarəetmə'], ['requests', 'inbox', 'Sorğular' + badge(req), 0, 1], ['carLinks', 'link', 'Maşın kartı linkləri' + badge(links), 0, 1],
+       ['suppliers', 'truck', 'Təchizatçılar', 0, 1], ['users', 'user', 'İstifadəçilər', 0, 1], ['settings', 'gear', 'Parametrlər', 0, 1],
+       ['more', 'more', 'Daha' + badge(pend), 1, 0]]
+    : [['home', 'home', 'Əsas', 1, 1], ['cars', 'car', 'Maşınlar', 1, 1], ...(S.user.kassa ? [['kassa', 'wallet', 'Kassa', 1, 1]] : []),
+       ['carLinks', 'link', 'Maşın kartı linkləri' + badge(links), 0, 1], ['me', 'user', 'Mən', 1, 1]];
+  // Telefonda aktiv düymə
   const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more',
-    requests: 'more', ustaDebts: 'more', carLinks: isAdmin() ? 'more' : 'cars', linkNew: isAdmin() ? 'more' : 'cars', debtList: isAdmin() ? 'more' : 'me', payForm: isAdmin() ? 'more' : 'me', users: 'more', userForm: 'more', settings: 'more', kassaHistory: 'kassa',
+    requests: 'more', ustaDebts: 'more', carLinks: admin ? 'more' : 'cars', linkNew: admin ? 'more' : 'cars', debtList: admin ? 'more' : 'me', payForm: admin ? 'more' : 'me', users: 'more', userForm: 'more', settings: 'more', kassaHistory: 'kassa',
     productForm: 'products', purchaseForm: 'products', purchaseList: 'products' };
-  const cur = map[S.view] || S.view;
-  return `<nav class="bottom" aria-label="Menyu"><div class="in">${items.map(([v, i, t]) => `<button data-tab="${v}" class="${cur === v ? 'on' : ''}">${ic(i)}<span>${t}</span></button>`).join('')}</div></nav>`;
+  // Kompüterdə aktiv bənd (hər bölmə öz bəndini işıqlandırır)
+  const dmap = { carHistory: 'cars', carForm: 'cars', report: 'home', kassaHistory: 'kassa', productForm: 'products', purchaseForm: 'products', purchaseList: 'products',
+    supplierForm: 'suppliers', supplierDetail: 'suppliers', supplierLinks: 'suppliers', supplierLinkLog: 'suppliers', supplierPay: 'suppliers', cheque: 'suppliers',
+    linkNew: 'carLinks', userForm: 'users', debtList: admin ? 'ustaDebts' : 'me', payForm: admin ? 'ustaDebts' : 'me' };
+  const cur = map[S.view] || S.view, curD = dmap[S.view] || S.view;
+  const btns = items.map(([v, i, t, m, d]) => v === 'sec' ? `<div class="side-sec side-only">${i}</div>`
+    : `<button data-tab="${v}" class="${m ? '' : 'side-only'} ${d ? '' : 'mob-only'} ${cur === v ? 'm-on' : ''} ${curD === v ? 'd-on' : ''}">${ic(i)}<span>${t}</span></button>`).join('');
+  const head = `<div class="side-head">${logoFull(S.settings.servis_adi)}${admin ? '' : `<button class="btn primary" data-act="newJob" ${b.blocked ? 'disabled' : ''}>${ic('plus', 18)}Yeni iş</button>`}</div>`;
+  const foot = `<div class="side-foot">
+    <div class="between"><div class="who"><b>${esc(S.user.ad)}</b><span class="muted">${admin ? 'Admin' : 'Usta'} · ${esc(S.user.telefon)}</span></div>${langSelect()}</div>
+    <div class="row"><button class="btn small" data-act="toChangePin">${ic('lock', 16)}Şifrə</button><button class="btn small danger" data-act="logout">Çıxış</button></div>
+  </div>`;
+  return `<nav class="bottom" aria-label="Menyu">${head}<div class="in">${btns}</div>${foot}</nav>`;
 }
 
 const presetSeg = (key, view) => `<div class="seg" role="group" aria-label="Dövr">${[['gun', 'Bu gün'], ['hefte', 'Bu həftə'], ['ay', 'Bu ay']].map(([k, l]) => `<button data-preset="${k}" data-view="${view}" class="${key === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
@@ -310,6 +339,7 @@ VIEWS.home = async (p) => {
   <div class="between"><div><div class="muted">${longToday()}</div><h1>Bugünkü iş</h1></div></div>
   ${blockBanner(b)}
   ${linkBanner()}
+  <div class="cols"><div class="col">
   <div class="card">
     <div class="between"><span class="muted">Mənim qazancım</span>${b.myRequestSent
       ? `<span class="daybtn done">${ic('check', 14)}Sorğu göndərildi</span>`
@@ -324,8 +354,10 @@ VIEWS.home = async (p) => {
   </div>
   <button class="btn primary big" data-act="newJob" ${b.blocked ? 'disabled' : ''}>${ic('plus')}Yeni iş</button>
   <form class="search" data-form="carSearch" role="search">${ic('search', 18)}<input name="q" placeholder="Nömrə, marka və ya müştəri" aria-label="Maşın axtar"></form>
+  </div><div class="col main-col">
   <div class="between"><h2>Son maşınlar</h2><button class="btn ghost small" data-tab="cars">Hamısı</button></div>
-  <div class="list">${b.recent.length ? b.recent.map(r => carRow(r.car, `${fmtDate(r.tarix)} · ${esc(r.xulase)}`, money(r.umumi))).join('') : '<div class="empty">Hələ iş yoxdur. "Yeni iş" ilə başlayın.</div>'}</div>`;
+  <div class="list">${b.recent.length ? b.recent.map(r => carRow(r.car, `${fmtDate(r.tarix)} · ${esc(r.xulase)}`, money(r.umumi))).join('') : '<div class="empty">Hələ iş yoxdur. "Yeni iş" ilə başlayın.</div>'}</div>
+  </div></div>`;
 };
 
 const dueSub = c => c.due === 'red' ? `<span style="color:var(--danger)">Yağ dəyişmə vaxtı çatıb (${fmtDate(c.novbeti_tarix)})</span>` : c.due === 'orange' ? `<span style="color:var(--accent)">Yağ dəyişməyə az qalıb (${fmtDate(c.novbeti_tarix)})</span>` : '';
@@ -476,6 +508,7 @@ VIEWS.carHistory = async (p) => {
   S.params.car = c; S.params.hist = h;
   const blocked = S.boot && S.boot.blocked;
   return `
+  <div class="cols"><div class="col">
   <div class="card ${c.due ? 'due-' + c.due : ''}">
     <div class="between"><span class="plate" style="font-size:14px">${esc(c.nomre)}</span><button class="btn small" data-act="editCar">Düzəlt</button></div>
     <div><h1 style="font-size:20px">${esc([c.marka, c.model, c.il].filter(Boolean).join(' ') || 'Maşın')}</h1><div class="muted">${esc(c.musteri || '')}${c.telefon ? ' · ' + esc(c.telefon) : ''}</div></div>
@@ -487,6 +520,7 @@ VIEWS.carHistory = async (p) => {
     ${h.jobs.length ? `<button class="btn ${c.due === 'red' ? 'primary' : ''}" data-act="remind">${ic('bell', 18)}Müştəriyə xatırlatma göndər</button>` : ''}
   </div>
   ${isAdmin() ? '' : `<button class="btn primary big" data-act="jobForCar" ${blocked ? 'disabled' : ''}>${ic('plus')}Bu maşına yeni iş</button>`}
+  </div><div class="col main-col">
   <h2>Tarixçə · ${h.jobs.length} iş</h2>
   <div class="list">${h.jobs.length ? h.jobs.map(j => `
     <button class="item" data-act="openReceipt" data-id="${esc(j.job_id)}" style="align-items:flex-start">
@@ -496,7 +530,8 @@ VIEWS.carHistory = async (p) => {
         <span class="muted">Usta: ${esc(j.usta)} · Qəbz №${esc(j.qebz)}</span>
       </span>
       <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><b style="font-size:14px">${money(j.umumi)}</b>${j.borc ? `<span class="pill bad">borc ${money(j.borc)}</span>` : ''}</span>
-    </button>`).join('') : '<div class="empty">Bu maşına hələ iş qeyd olunmayıb.</div>'}</div>`;
+    </button>`).join('') : '<div class="empty">Bu maşına hələ iş qeyd olunmayıb.</div>'}</div>
+  </div></div>`;
 };
 
 // ------------------------------------------------------------- Yeni iş
@@ -520,6 +555,7 @@ VIEWS.job = async () => {
   if (!d.kmTouched) d.novbeti_km = d.km && t.hasOil ? String(num(d.km) + interval) : '';
   return `
   <h1>Yeni iş</h1>
+  <div class="cols"><div class="col main-col">
   ${c ? `
   <div class="card">
     <div class="between"><span class="plate" style="font-size:14px">${esc(c.nomre)}</span><button class="btn small" data-act="changeCar">Dəyiş</button></div>
@@ -546,6 +582,7 @@ VIEWS.job = async () => {
     <datalist id="dl-temir">${opts(dictNames('temir'))}</datalist>
     <button class="btn" data-act="addRepair">${ic('wrench', 18)}Təmir işi əlavə et</button>
   </div>
+  </div><div class="col sticky">
 
   <div class="card">
     <div class="between"><span>Usta haqqı</span><b>${money(t.usta)}</b></div>
@@ -573,7 +610,8 @@ VIEWS.job = async () => {
     </div>
     <label class="field">Qeyd<input data-bind="qeyd" value="${esc(d.qeyd)}" placeholder="istəyə bağlı"></label>
   </div>
-  <button class="btn primary big" data-act="saveJob" ${c && !t.over ? '' : 'disabled'}>Yadda saxla · <span data-sum="umumi2">${money(t.umumi)}</span></button>`;
+  <button class="btn primary big" data-act="saveJob" ${c && !t.over ? '' : 'disabled'}>Yadda saxla · <span data-sum="umumi2">${money(t.umumi)}</span></button>
+  </div></div>`;
 };
 
 // Az qalan mal xəbərdarlığı ayrıca: say dəyişəndə yalnız bu hissə yenilənir
@@ -747,6 +785,7 @@ VIEWS.me = async (p) => {
   return `
   <div><div class="muted">${esc(S.user.telefon)}</div><h1>${esc(S.user.ad)}</h1></div>
   ${presetSeg(key, 'me')}
+  <div class="cols"><div class="col main-col">
   <div class="card">
     <div><div class="muted">Qazancım (usta haqqı + təmir)</div><div class="big">${money(s.qazanc)}</div></div>
     <div class="grid3">
@@ -760,10 +799,12 @@ VIEWS.me = async (p) => {
     <span class="muted">Gözləyən usta haqqı müştəri borcu ödəyəndə hesablanır.</span>
   </div>
   <button class="item" data-act="myDebts"><span class="grow"><span>Ödənilməyən işlər</span><span class="muted">Müştəri borcları</span></span><b style="color:${s.borc ? 'var(--danger)' : 'inherit'}">${money(s.borc)}</b></button>
+  </div><div class="col">
   ${reqs.length ? `<h2>Alış sorğularım</h2>
   <div class="list">${reqs.slice(0, 10).map(x => `<div class="item" style="cursor:default"><span class="grow"><span>${esc(x.ad)}</span><span class="muted">${esc(x.saat)}${x.status === 'redd' && x.sebeb ? ' · Səbəb: ' + esc(x.sebeb) : ''}</span></span>${reqStatus(x.status)}</div>`).join('')}</div>` : ''}
   <button class="btn" data-act="toChangePin">Şifrəni dəyiş</button>
-  <button class="btn danger" data-act="logout">Çıxış</button>`;
+  <button class="btn danger" data-act="logout">Çıxış</button>
+  </div></div>`;
 };
 
 VIEWS.debtList = async (p) => {
@@ -800,6 +841,7 @@ VIEWS.kassa = async () => {
   ${(k.openDays || []).length ? `<div class="banner bad"><b>Bağlanmamış gün: ${(k.openDays || []).map(fmtDate).join(', ')}</b><span>${admin ? 'Bu günü bağlayana qədər ustalar yeni iş yaza bilmir.' : 'Admin bağlayana qədər yeni iş yazmaq olmur.'}</span></div>` : ''}
   ${admin && k.sorgular && k.sorgular.length ? `<div class="banner warn"><b>Kassa bağlama sorğusu</b>${k.sorgular.map(s => `<span>${esc(s.ad)} · ${fmtDate(s.tarix)} ${esc(s.saat)}</span>`).join('')}</div>` : ''}
   ${k.baglanib ? `<span class="pill ok">Gün bağlanıb · fərq ${money(k.ferq)}</span>` : ''}
+  <div class="cols"><div class="col main-col">
   <div class="card">
     <div><div class="muted">Kassada olmalı nağd</div><div class="big">${money(k.hesablanan)}</div></div>
     <div class="grid2">
@@ -818,7 +860,7 @@ VIEWS.kassa = async () => {
     ${k.ustalar.map(u => `<tr><td>${esc(u.ad)}</td><td class="r">${money(u.temir)}</td><td class="r">${money(u.usta_haqqi)}</td><td class="r">${money(u.kart)}</td><td class="r"><b>${money(u.qalir)}</b></td>
       ${admin && !k.baglanib ? `<td class="r">${u.qalir > 0 ? `<button class="btn small primary" data-act="payUsta" data-id="${esc(u.user_id)}" data-amt="${u.qalir}" data-name="${esc(u.ad)}">Ödə</button>` : '✓'}</td>` : ''}</tr>`).join('')}
   </table><span class="muted">Təmir pulu dərhal, usta haqqı müştəri ödədikcə çatır. Kart hissəsi nağd verilmir.</span>` : '<div class="empty">Bu gün iş yoxdur.</div>'}</div>
-  ${admin ? `
+  </div>${admin ? `<div class="col">
   ${k.hereketler && k.hereketler.length ? `<h2>Hərəkətlər</h2><div class="list">${k.hereketler.map(m => `
     <div class="item" style="cursor:default"><span class="grow"><span>${NOV[m.nov] || m.nov}${m.kateqoriya ? ' · ' + esc(m.kateqoriya) : ''}${m.alan ? ' · ' + esc(m.alan) : ''}</span><span class="muted">${esc(m.saat)}${m.sebeb ? ' · ' + esc(m.sebeb) : ''}</span></span><b>${money(m.mebleg)}</b>
     ${m.nov !== 'techizatci' ? `<button class="btn small" data-act="editMove" data-id="${esc(m.move_id)}" data-amt="${m.mebleg}">Düzəlt</button>` : ''}</div>`).join('')}</div>` : ''}
@@ -838,7 +880,7 @@ VIEWS.kassa = async () => {
     <input type="hidden" name="date" value="${k.tarix}">
     <label class="field">Faktiki nağd (₼)<input name="faktiki" inputmode="decimal" required></label>
     <button class="btn primary big" type="submit">Kassanı bağla</button>
-  </form>`}` : ''}`;
+  </form>`}</div>` : ''}</div>`;
 };
 
 VIEWS.kassaHistory = async (p) => {
@@ -868,6 +910,7 @@ VIEWS.report = async (p) => {
   ${pend.close || pend.stock ? `<div class="banner warn"><b>Yeni sorğular</b><span>${pend.close ? pend.close + ' kassa bağlama' : ''}${pend.close && pend.stock ? ' · ' : ''}${pend.stock ? pend.stock + ' alış' : ''}</span><button class="btn small" data-act="go" data-v="requests">Sorğulara bax</button></div>` : ''}
   ${presetSeg(key, 'home')}
   ${rangeForm(range[0], range[1], 'report')}
+  <div class="cols"><div class="col">
   <div class="card">
     <div class="between" style="align-items:flex-end"><div><div class="muted">Ümumi dövriyyə</div><div class="big">${money(t.umumi)}</div></div><span class="muted">${t.is_sayi} iş</span></div>
     <div class="grid3">
@@ -883,12 +926,14 @@ VIEWS.report = async (p) => {
     </div>
     <button class="btn small" data-act="go" data-v="income">Gəlir-xərc hesabatı</button>
   </div>
+  </div><div class="col main-col">
   <h2>Ustalar</h2>
   <div class="card scroll">${r.ustalar.length ? `<table><tr><th>Usta</th><th class="r">İş</th><th class="r">Usta haqqı</th><th class="r">Təmir</th><th class="r">Qazanc</th></tr>
     ${r.ustalar.map(u => `<tr><td>${esc(u.ad)}</td><td class="r">${u.is_sayi}</td><td class="r">${money(u.usta_haqqi)}</td><td class="r">${money(u.temir)}</td><td class="r"><b>${money(u.qazanc)}</b></td></tr>`).join('')}</table>` : '<div class="empty">Bu dövrdə iş yoxdur.</div>'}</div>
   ${r.mehsullar.length ? `<h2>Ən çox satılan</h2><div class="card scroll"><table><tr><th>Mal</th><th class="r">Miqdar</th><th class="r">Satış</th><th class="r">Mənfəət</th></tr>
     ${r.mehsullar.map(m => `<tr><td>${esc(m.ad)}</td><td class="r">${m.miqdar}</td><td class="r">${money(m.satis)}</td><td class="r">${money(m.menfeet)}</td></tr>`).join('')}</table></div>` : ''}
-  ${r.az_qalan.length ? `<h2>Az qalan</h2><div class="list">${r.az_qalan.map(x => `<button class="item" data-act="buyFor" data-id="${esc(x.product_id)}"><span class="grow"><span>${esc(x.ad)}</span><span class="muted">Alış qeyd et</span></span><span class="pill bad">${x.qaliq} ${esc(x.vahid)}</span></button>`).join('')}</div>` : ''}`;
+  ${r.az_qalan.length ? `<h2>Az qalan</h2><div class="list">${r.az_qalan.map(x => `<button class="item" data-act="buyFor" data-id="${esc(x.product_id)}"><span class="grow"><span>${esc(x.ad)}</span><span class="muted">Alış qeyd et</span></span><span class="pill bad">${x.qaliq} ${esc(x.vahid)}</span></button>`).join('')}</div>` : ''}
+  </div></div>`;
 };
 
 VIEWS.income = async (p) => {

@@ -78,7 +78,7 @@ td.r,th.r{text-align:right}
 nav.bottom{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(12px + env(safe-area-inset-bottom))}
 nav.bottom .in{max-width:520px;margin:0 auto;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
 nav.bottom button{height:56px;border:none;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;cursor:pointer}
-nav.bottom button.on{color:var(--accent)}
+nav.bottom button.m-on{color:var(--accent)}
 .toast{position:fixed;left:16px;right:16px;bottom:96px;max-width:488px;margin:0 auto;background:#3A1E1E;color:#FFD9D9;border-radius:12px;padding:12px 14px;font-size:14px;z-index:20}
 .toast.ok{background:#173322;color:#C9F7D7}
 .loading{position:fixed;inset:0;background:rgba(18,20,23,.45);display:flex;align-items:center;justify-content:center;z-index:30;animation:ld-in .2s ease-out}
@@ -138,6 +138,68 @@ select.lang{width:auto;min-height:30px;height:30px;padding:0 8px;font-size:12px;
 .doc .muted{color:#5E5A50}
 .doc table td,.doc table th{border-bottom:1px solid #E2DED3;color:#141413}
 .pl{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+
+/* Sütunlar: telefonda alt-alta (əvvəlki kimi), kompüterdə yan-yana */
+.cols,.col{display:flex;flex-direction:column;gap:16px}
+.side-head,.side-foot,.side-only,nav.bottom .side-only{display:none}
+
+/* ===== Kompüter görünüşü (ekran ≥ 1024 px). Telefon görünüşü dəyişmir. ===== */
+@media (min-width:1024px){
+  #app{max-width:none}
+  body.side #app{padding-left:256px}
+  main{width:100%;max-width:1200px;margin:0 auto;padding:28px 40px 56px;gap:20px}
+  main.narrow{max-width:680px}
+  h1{font-size:28px}
+  table{font-size:14px}
+  td{padding:10px 6px}
+  th{padding:8px 6px}
+
+  /* Sol menyu */
+  nav.bottom{top:0;bottom:0;right:auto;width:256px;border-top:none;border-right:1px solid var(--line);padding:20px 14px 16px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+  nav.bottom .in{max-width:none;margin:0;display:flex;flex-direction:column;gap:2px}
+  nav.bottom button{height:42px;flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:0 12px;border-radius:12px;font-size:14px;text-align:left}
+  nav.bottom button svg{width:20px;height:20px;flex-shrink:0}
+  nav.bottom button:hover{background:var(--surface2);color:var(--text)}
+  nav.bottom button.m-on{color:var(--muted)}
+  nav.bottom button.d-on,nav.bottom button.d-on:hover{background:var(--accent-soft);color:var(--accent);font-weight:500}
+  nav.bottom button>span{flex:1;display:flex;align-items:center;min-width:0}
+  nav.bottom .badge{margin-left:auto}
+  .mob-only{display:none!important}
+  .side-only,nav.bottom .side-only{display:flex}
+  .side-head{display:flex;flex-direction:column;gap:16px;padding:4px 6px 14px}
+  .side-head .btn{width:100%}
+  .side-sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:16px 12px 6px;opacity:.8}
+  .side-foot{display:flex;flex-direction:column;gap:10px;margin-top:auto;border-top:1px solid var(--line);padding:14px 6px 0}
+  .side-foot .who{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .side-foot .who b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .side-foot .row{gap:8px}
+  .side-foot .btn{flex:1}
+  body.side .topbar .lang{display:none}
+
+  /* Sütunlar və siyahılar */
+  .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
+  .grid2:has(>.stat),.grid3:has(>.stat){grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+  .item:hover,.check:hover{background:var(--surface2)}
+  .btn:hover:not(:disabled){border-color:#3A3F48}
+  .btn.primary:hover:not(:disabled){filter:brightness(1.06)}
+  .search{max-width:560px}
+  main:not(.narrow)>.seg,main:not(.narrow)>form[data-form="range"]{max-width:560px;width:100%}
+  body.side .topbar:not(:has(.icon-btn:not(.mob-only))){display:none}
+  .receipt,.doc{max-width:460px;width:100%;align-self:center}
+  .toast{left:24px;right:24px;bottom:24px;max-width:480px}
+  body.side .toast{left:280px}
+}
+/* Geniş ekranda (≥ 1200 px) sütunlar yan-yana */
+@media (min-width:1200px){
+  .cols{flex-direction:row;align-items:flex-start;gap:24px}
+  .cols>.col{flex:1 1 0;min-width:0}
+  .cols>.col.main-col{flex:1.35 1 0}
+  .cols>.col:not(:has(*)){display:none}
+  .cols>.col.sticky{position:sticky;top:24px}
+}
+@media (min-width:1440px){
+  main{padding-left:56px;padding-right:56px}
+}
 </style>
 </head>
 <body>

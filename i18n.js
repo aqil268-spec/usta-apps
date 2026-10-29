@@ -8,7 +8,7 @@
 const I18N_DICT = {
   // --- Ümumi
   'Əsas': ['Home', 'Главная'], 'Maşınlar': ['Cars', 'Машины'], 'Kassa': ['Cash desk', 'Касса'], 'Mən': ['Me', 'Я'],
-  'Hesabat': ['Report', 'Отчёт'], 'Mallar': ['Goods', 'Товары'], 'Daha': ['More', 'Ещё'], 'Menyu': ['Menu', 'Меню'],
+  'Hesabat': ['Report', 'Отчёт'], 'Hesabatlar': ['Reports', 'Отчёты'], 'İdarəetmə': ['Management', 'Управление'], 'Mallar': ['Goods', 'Товары'], 'Daha': ['More', 'Ещё'], 'Menyu': ['Menu', 'Меню'],
   'Geri': ['Back', 'Назад'], 'Yeni': ['New', 'Новый'], 'Yadda saxla': ['Save', 'Сохранить'], 'Yadda saxlanıldı': ['Saved', 'Сохранено'],
   'Düzəlt': ['Edit', 'Изменить'], 'Dəyiş': ['Change', 'Изменить'], 'Sil': ['Delete', 'Удалить'], 'Axtar': ['Search', 'Поиск'],
   'Hamısı': ['All', 'Все'], 'Hazırdır': ['Done', 'Готово'], 'Əlavə et': ['Add', 'Добавить'], 'Əlavə olundu': ['Added', 'Добавлено'],
