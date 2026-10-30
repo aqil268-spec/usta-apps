@@ -327,10 +327,22 @@ const I18N_DICT = {
   'Təsdiq göndərildi. Təşəkkür edirik!': ['Confirmation sent. Thank you!', 'Подтверждение отправлено. Спасибо!'], 'Sifariş yaradıldı. Linki göndərin.': ['Order created. Send the link.', 'Заказ создан. Отправьте ссылку.'],
   'Sifariş ləğv edildi': ['Order cancelled', 'Заказ отменён'], 'Sifariş ləğv edilsin? Link işləməyəcək.': ['Cancel the order? The link will stop working.', 'Отменить заказ? Ссылка перестанет работать.'],
   'Alış, kassa bağlama, sifariş cavabları': ['Purchases, day closing, order replies', 'Закупки, закрытие дня, ответы на заказы'], 'Təchizatçı cavabları': ['Supplier replies', 'Ответы поставщиков'],
+  'Stoka əlavə et': ['Add to stock', 'Добавить на склад'], 'Stoka əlavə edilib': ['Added to stock', 'Добавлено на склад'], 'Stoka əlavə edildi': ['Added to stock', 'Добавлено на склад'],
+  'Cavab gözləmədən stoka əlavə et': ['Add to stock without waiting for reply', 'Добавить на склад, не дожидаясь ответа'],
+  'Mal gələndə basın. Gələn say və qiyməti yoxlayıb təsdiq edəcəksiniz.': ['Press when the goods arrive. You will check the received quantity and price.', 'Нажмите, когда товар придёт. Вы проверите полученное количество и цену.'],
+  'Gələn malı sayın. Fərq varsa, sayı və ya qiyməti düzəldin. Gəlməyən mal üçün 0 yazın. Hər mal stoka alış kimi düşür.': ['Count the goods that arrived. Correct quantity or price if different. Enter 0 for items that did not arrive. Each item is added to stock as a purchase.', 'Пересчитайте полученный товар. Исправьте количество или цену, если есть разница. Для непришедшего товара введите 0. Каждый товар попадает на склад как закупка.'],
+  'Gəlmədi': ['Not received', 'Не пришло'], 'Gəldi': ['Received', 'Пришло'], 'Gələn say': ['Received qty', 'Пришло, кол-во'], 'Alış qiyməti (₼)': ['Purchase price (₼)', 'Цена закупки (₼)'],
+  'Sifariş:': ['Order:', 'Заказ:'], 'Təsdiq:': ['Confirmed:', 'Подтверждено:'], 'Stoka düşəcək məbləğ': ['Amount added to stock', 'Сумма на склад'],
+  'Stoka əlavə gözləyən sifarişlər': ['Orders waiting to be added to stock', 'Заказы, ожидающие оприходования'],
+  'Mal (və ya barkodu oxudun)': ['Item (or scan barcode)', 'Товар (или сканируйте штрихкод)'], 'Axtar və ya barkod': ['Search or barcode', 'Поиск или штрихкод'],
+  'Bu barkodla yeni mal yarat': ['Create a new item with this barcode', 'Создать товар с этим штрихкодом'], 'Bu barkodla mal tapılmadı:': ['No item with this barcode:', 'Товар с этим штрихкодом не найден:'],
 };
 
 // Dəyişən hissəsi olan mətnlər: [nümunə, EN, RU]
 const I18N_PAT = [
+  [/^(\d+) mal stoka əlavə edilsin\? Məbləğ: (.+)$/, m => `Add ${m[1]} item(s) to stock? Amount: ${m[2]}`, m => `Добавить на склад товаров: ${m[1]}? Сумма: ${m[2]}`],
+  [/^(.+): bu sifarişdə yoxdur$/, m => `${m[1]}: not in this order`, m => `${m[1]}: нет в этом заказе`],
+  [/^Heç bir mal gəlməyib\. Sifarişi ləğv edin və ya say yazın\.$/, m => 'Nothing received. Cancel the order or enter a quantity.', m => 'Ничего не пришло. Отмените заказ или введите количество.'],
   [/^(\d+) sətirdə dəyişiklik var$/, m => `Changes in ${m[1]} line(s)`, m => `Изменения в строках: ${m[1]}`],
   [/^(.+): siyahıda var$/, m => `${m[1]}: already in the list`, m => `${m[1]}: уже в списке`],
   [/^(.+): sayı yazın$/, m => `${m[1]}: enter the quantity`, m => `${m[1]}: введите количество`],

@@ -61,7 +61,7 @@ function periods() {
 
 // ------------------------------------------------------------- API + keş
 const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'createCarLink', 'createSupplierLink', 'revokeSupplierLink', 'approveCarLink', 'rejectCarLink', 'cancelCarLink', 'linkSubmit', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
-  'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings', 'createOrder', 'orderSeen', 'cancelOrder', 'orderConfirm'];
+  'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings', 'createOrder', 'orderSeen', 'cancelOrder', 'orderConfirm', 'receiveOrder'];
 let MEM = {}; try { MEM = JSON.parse(localStorage.getItem('swr') || '{}'); } catch (e) { MEM = {}; }
 
 // Açılış ekranı: servisin adı (son yüklənmədən), ilk ekran hazır olanda və ən az 1,6 s keçəndə gizlənir
@@ -212,7 +212,7 @@ const VIEWS = {};
 // Kompüterdə dar (forma, qəbz) ekranlar: mətn sətri çox uzanmasın deyə ortada dar sütun
 // Kompüterdə sol menyuda olan ekranlar: orada "Geri" düyməsi göstərilmir
 const SIDE_ROOTS = ['home', 'report', 'kassa', 'products', 'cars', 'income', 'stock', 'ustaDebts', 'requests', 'carLinks', 'suppliers', 'users', 'settings', 'me', 'more'];
-const NARROW = ['login', 'changePin', 'pinShow', 'receipt', 'cheque', 'carForm', 'productForm', 'purchaseForm', 'supplierForm', 'supplierPay', 'userForm', 'settings', 'payForm', 'linkNew', 'publicCar', 'publicStock', 'publicOrder', 'orderNew'];
+const NARROW = ['login', 'changePin', 'pinShow', 'receipt', 'cheque', 'carForm', 'productForm', 'purchaseForm', 'supplierForm', 'supplierPay', 'userForm', 'settings', 'payForm', 'linkNew', 'publicCar', 'publicStock', 'publicOrder', 'orderNew', 'orderReceive'];
 // Dil seçimi: yuxarı sağda, sakit rəngdə
 const langSelect = () => `<select class="lang" data-lang data-noi18n aria-label="Dil / Language / Язык">${LANGS.map(([k, l]) => `<option value="${k}" ${LANG === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 // Sistem pəncərələri də seçilmiş dildə
@@ -263,13 +263,13 @@ function nav() {
     : [['home', 'home', 'Əsas', 1, 1], ['cars', 'car', 'Maşınlar', 1, 1], ...(S.user.kassa ? [['kassa', 'wallet', 'Kassa', 1, 1]] : []),
        ['carLinks', 'link', 'Maşın kartı linkləri' + badge(links), 0, 1], ['me', 'user', 'Mən', 1, 1]];
   // Telefonda aktiv düymə
-  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more', orders: 'more', orderNew: 'more', orderDetail: 'more',
+  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more', orders: 'more', orderNew: 'more', orderDetail: 'more', orderReceive: 'more',
     requests: 'more', ustaDebts: 'more', carLinks: admin ? 'more' : 'cars', linkNew: admin ? 'more' : 'cars', debtList: admin ? 'more' : 'me', payForm: admin ? 'more' : 'me', users: 'more', userForm: 'more', settings: 'more', kassaHistory: 'kassa',
     productForm: 'products', purchaseForm: 'products', purchaseList: 'products' };
   // Kompüterdə aktiv bənd (hər bölmə öz bəndini işıqlandırır)
   const dmap = { carHistory: 'cars', carForm: 'cars', report: 'home', kassaHistory: 'kassa', productForm: 'products', purchaseForm: 'products', purchaseList: 'products',
     supplierForm: 'suppliers', supplierDetail: 'suppliers', supplierLinks: 'suppliers', supplierLinkLog: 'suppliers', supplierPay: 'suppliers', cheque: 'suppliers',
-    linkNew: 'carLinks', userForm: 'users', orders: 'suppliers', orderNew: 'suppliers', orderDetail: 'suppliers', debtList: admin ? 'ustaDebts' : 'me', payForm: admin ? 'ustaDebts' : 'me' };
+    linkNew: 'carLinks', userForm: 'users', orders: 'suppliers', orderNew: 'suppliers', orderDetail: 'suppliers', orderReceive: 'suppliers', debtList: admin ? 'ustaDebts' : 'me', payForm: admin ? 'ustaDebts' : 'me' };
   const cur = map[S.view] || S.view, curD = dmap[S.view] || S.view;
   const btns = items.map(([v, i, t, m, d]) => v === 'sec' ? `<div class="side-sec side-only">${i}</div>`
     : `<button data-tab="${v}" class="${m ? '' : 'side-only'} ${d ? '' : 'mob-only'} ${cur === v ? 'm-on' : ''} ${curD === v ? 'd-on' : ''}">${ic(i)}<span>${t}</span></button>`).join('');
@@ -1042,7 +1042,8 @@ VIEWS.purchaseForm = async (p) => {
   ${p.request_id ? `<div class="banner warn">Ustanın sorğusu üzrə alış</div>` : ''}
   <form class="card" data-form="purchase">
     <input type="hidden" name="request_id" value="${esc(p.request_id || '')}">
-    <label class="field">Mal<input name="product" list="dl-pp" value="${esc(cur ? cur.label : '')}" placeholder="Axtar" required autocomplete="off"></label>
+    <div class="row" style="align-items:flex-end"><label class="field" style="flex:1">Mal (və ya barkodu oxudun)<input name="product" list="dl-pp" value="${esc(cur ? cur.label : '')}" placeholder="Axtar və ya barkod" required autocomplete="off"></label>${camBtn()}</div>
+    <div data-unknown></div>
     <datalist id="dl-pp">${S.products.map(x => `<option value="${esc(x.label)}"></option>`).join('')}</datalist>
     <label class="field">Təchizatçı<input name="supplier_ad" list="dl-sup" placeholder="Axtar və ya yeni ad yaz" required autocomplete="off"></label>
     <datalist id="dl-sup">${opts(sups.filter(s => s.aktiv).map(s => s.ad))}</datalist>
@@ -1131,7 +1132,7 @@ VIEWS.supplierPay = (p) => `<h1>Təchizatçıya ödəniş</h1>
 // ------------------------------------------------------------- Təchizatçıya mal sifarişi (link ilə)
 const orderUrl = token => location.origin + location.pathname + '#sifaris=' + token;
 const orderText = (o, url) => `Salam! ${S.settings.servis_adi || 'Servis'}: mal sifarişi №${o.nomre}. Linkə baxın. Dəyişiklik yoxdursa, "Təsdiq et" basın. Fərqli say və ya qiymət varsa, yalnız həmin sətri yazın: ${url}`;
-const orderPill = st => ({ ok: '<span class="pill">Cavab gözlənilir</span>', tesdiq: '<span class="pill ok">Təsdiqlənib</span>', legv: '<span class="pill muted-pill">Ləğv edilib</span>', bitib: '<span class="pill muted-pill">Vaxtı bitib</span>' }[st] || '');
+const orderPill = st => ({ ok: '<span class="pill">Cavab gözlənilir</span>', tesdiq: '<span class="pill ok">Təsdiqlənib</span>', qebul: '<span class="pill ok">Stoka əlavə edilib</span>', legv: '<span class="pill muted-pill">Ləğv edilib</span>', bitib: '<span class="pill muted-pill">Vaxtı bitib</span>' }[st] || '');
 const qtyTxt = (q, v) => `<span>${grp(q, 2)} ${esc(v || '')}</span>`;
 
 VIEWS.orders = async (p) => {
@@ -1180,7 +1181,7 @@ function orderAdd(p) {
 VIEWS.orderDetail = async (p) => {
   const o = p.data || (S.params.data = await api('orderDetail', { order_id: p.order_id }));
   if (o.state === 'tesdiq' && !o.baxildi) { o.baxildi = true; api('orderSeen', { order_id: o.order_id }, true).then(() => loadBoot(true)).catch(() => {}); }
-  const done = o.state === 'tesdiq';
+  const done = o.state === 'tesdiq' || (o.state === 'qebul' && !!o.tesdiq_saati), got = o.state === 'qebul';
   const cell = (v, old, ch, f) => ch && v !== old ? `<b style="color:var(--accent)">${f(v)}</b><br><s class="muted">${f(old)}</s>` : f(v);
   return `<div class="between"><div><div class="muted" data-noi18n>${esc(o.techizatci)}</div><h1><span>Sifariş</span> №${esc(o.nomre)}</h1></div>${orderPill(o.state)}</div>
   ${o.state === 'ok' && o.token ? `<div class="card" style="border-color:var(--accent)">
@@ -1190,15 +1191,43 @@ VIEWS.orderDetail = async (p) => {
     <span class="muted">Link ${msDT(o.bitme)}-dək işləyir.</span>
   </div>` : ''}
   ${o.qeyd ? `<div class="banner info"><b>Qeyd</b><span data-noi18n>${esc(o.qeyd)}</span></div>` : ''}
+  ${got ? `<div class="banner ok"><b>Stoka əlavə edilib</b><span>${fmtDate(o.qebul_tarix)} · ${money(o.r_cem)}</span></div>` : ''}
   ${done ? `<div class="banner ${o.deyisiklik ? 'warn' : 'ok'}"><b>${o.deyisiklik ? `${o.deyisiklik} sətirdə dəyişiklik var` : 'Təchizatçı dəyişiklik etmədən təsdiqləyib'}</b><span>${fullDT(o.tesdiq_saati)}${o.cihaz ? ' · ' + esc(o.cihaz) : ''}</span>${o.cavab_qeyd ? `<span data-noi18n>«${esc(o.cavab_qeyd)}»</span>` : ''}</div>` : ''}
   <div class="card scroll"><table>
-    <tr><th>Mal</th><th class="r">Say</th><th class="r">Qiymət</th>${done ? '<th class="r">Göndərəcək</th><th class="r">Qiymət</th>' : ''}</tr>
+    <tr><th>Mal</th><th class="r">Say</th><th class="r">Qiymət</th>${done ? '<th class="r">Göndərəcək</th><th class="r">Qiymət</th>' : ''}${got ? '<th class="r">Gəldi</th><th class="r">Qiymət</th>' : ''}</tr>
     ${o.items.map(i => `<tr><td data-noi18n>${esc(i.ad)}</td><td class="r">${qtyTxt(i.miqdar, i.vahid)}</td><td class="r">${money(i.qiymet)}</td>
-      ${done ? `<td class="r">${i.t_miqdar === 0 ? '<span class="pill bad">Yoxdur</span>' : cell(i.t_miqdar, i.miqdar, i.deyisib, v => qtyTxt(v, i.vahid))}</td><td class="r">${cell(i.t_qiymet, i.qiymet, i.deyisib, money)}</td>` : ''}</tr>`).join('')}
-    <tr><td><b>Cəmi</b></td><td></td><td class="r"><b>${money(o.cem)}</b></td>${done ? `<td></td><td class="r"><b>${money(o.t_cem)}</b></td>` : ''}</tr>
+      ${done ? `<td class="r">${i.t_miqdar === 0 ? '<span class="pill bad">Yoxdur</span>' : cell(i.t_miqdar, i.miqdar, i.deyisib, v => qtyTxt(v, i.vahid))}</td><td class="r">${cell(i.t_qiymet, i.qiymet, i.deyisib, money)}</td>` : ''}
+      ${got ? `<td class="r">${i.r_miqdar ? `<b>${qtyTxt(i.r_miqdar, i.vahid)}</b>` : '<span class="pill bad">Gəlmədi</span>'}</td><td class="r">${i.r_miqdar ? money(i.r_qiymet) : '—'}</td>` : ''}</tr>`).join('')}
+    <tr><td><b>Cəmi</b></td><td></td><td class="r"><b>${money(o.cem)}</b></td>${done ? `<td></td><td class="r"><b>${money(o.t_cem)}</b></td>` : ''}${got ? `<td></td><td class="r"><b>${money(o.r_cem)}</b></td>` : ''}</tr>
   </table></div>
-  ${o.state === 'ok' ? `<div class="grid2"><button class="btn" data-act="orderRefresh">Yenilə</button><button class="btn danger" data-act="osCancel">Ləğv et</button></div>` : ''}`;
+  ${o.state === 'tesdiq' ? `<button class="btn primary big" data-act="orderReceive">${ic('box', 20)}Stoka əlavə et</button><span class="muted">Mal gələndə basın. Gələn say və qiyməti yoxlayıb təsdiq edəcəksiniz.</span>` : ''}
+  ${o.state === 'ok' ? `<div class="grid2"><button class="btn" data-act="orderRefresh">Yenilə</button><button class="btn danger" data-act="osCancel">Ləğv et</button></div>
+  <button class="btn" data-act="orderReceive">${ic('box', 18)}Cavab gözləmədən stoka əlavə et</button>` : ''}`;
 };
+
+// Sifarişi stoka qəbul: hər sətirdə gələn say və qiymət (təchizatçının təsdiqlədiyi ilə doldurulub). 0 = gəlmədi.
+VIEWS.orderReceive = async (p) => {
+  const o = S.params.data || (S.params.data = await api('orderDetail', { order_id: p.order_id }));
+  if (o.state === 'qebul') { S.history.pop(); go('orderDetail', { order_id: o.order_id }, false); return null; }
+  const dq = i => i.t_miqdar !== null && i.t_miqdar !== undefined ? i.t_miqdar : i.miqdar, dp = i => i.t_qiymet !== null && i.t_qiymet !== undefined ? i.t_qiymet : i.qiymet;
+  return `<div><div class="muted" data-noi18n>${esc(o.techizatci)}</div><h1><span>Stoka əlavə et</span> · №${esc(o.nomre)}</h1></div>
+  <span class="muted">Gələn malı sayın. Fərq varsa, sayı və ya qiyməti düzəldin. Gəlməyən mal üçün 0 yazın. Hər mal stoka alış kimi düşür.</span>
+  <form class="list" data-form="orderReceive" style="display:flex;flex-direction:column;gap:10px">
+    ${o.items.map(i => `
+    <div class="card" style="gap:10px;padding:12px" data-rrow="${esc(i.product_id)}">
+      <div class="between"><span style="font-weight:500" data-noi18n>${esc(i.ad)}</span><button type="button" class="btn small" data-onone="${esc(i.oitem_id)}">Gəlmədi</button></div>
+      <span class="muted"><span>Sifariş:</span> ${qtyTxt(i.miqdar, i.vahid)} · ${money(i.qiymet)}${o.tesdiq_saati ? ` · <span>Təsdiq:</span> ${i.t_miqdar === 0 ? '<span>Yoxdur</span>' : qtyTxt(i.t_miqdar, i.vahid) + ' · ' + money(i.t_qiymet)}` : ''}</span>
+      <div class="grid2">
+        <label class="field">Gələn say<input name="q_${esc(i.oitem_id)}" inputmode="decimal" value="${esc(String(dq(i)))}"></label>
+        <label class="field">Alış qiyməti (₼)<input name="p_${esc(i.oitem_id)}" inputmode="decimal" value="${esc(String(dp(i)))}"></label>
+      </div>
+    </div>`).join('')}
+    <label class="field">Tarix<input type="date" name="tarix" value="${today()}"></label>
+    <div class="card" style="gap:6px"><div class="between"><span class="muted">Stoka düşəcək məbləğ</span><b data-rsum>${money(o.items.reduce((s, i) => s + num(dq(i)) * num(dp(i)), 0))}</b></div></div>
+    <button class="btn primary big" type="submit">${ic('check', 22)}Stoka əlavə et</button>
+  </form>`;
+};
+const receiveSum = () => { const f = $app.querySelector('form[data-form="orderReceive"]'); if (!f) return; let t = 0; f.querySelectorAll('input[name^="q_"]').forEach(q => { const pr = f.querySelector(`[name="p_${q.name.slice(2)}"]`); t += num(q.value) * num(pr && pr.value); }); const el = f.querySelector('[data-rsum]'); if (el) el.textContent = money(t); };
 
 // Təchizatçının gördüyü səhifə (girişsiz)
 VIEWS.publicOrder = async (p) => {
@@ -1348,6 +1377,8 @@ VIEWS.requests = async () => {
     </div>`).join('') : '<div class="empty">Yeni alış sorğusu yoxdur.</div>'}</div>
   ${(r.orders || []).length ? `<h2>Təchizatçı cavabları</h2>
   <div class="list">${r.orders.map(o => `<button class="item" data-act="openOrder" data-id="${esc(o.order_id)}"><span class="grow"><span data-noi18n>${esc(o.techizatci)}</span><span class="muted"><span>Sifariş</span> №${esc(o.nomre)} · ${fullDT(o.tesdiq_saati)}</span></span>${o.deyisiklik ? `<span class="pill">${o.deyisiklik} <span>dəyişiklik</span></span>` : '<span class="pill ok">Dəyişiklik yoxdur</span>'}</button>`).join('')}</div>` : ''}
+  ${(r.qebul || []).length ? `<h2>Stoka əlavə gözləyən sifarişlər</h2>
+  <div class="list">${r.qebul.map(o => `<button class="item" data-act="openOrder" data-id="${esc(o.order_id)}"><span class="grow"><span data-noi18n>${esc(o.techizatci)}</span><span class="muted"><span>Sifariş</span> №${esc(o.nomre)} · ${fullDT(o.tesdiq_saati)}</span></span><span class="pill">Stoka əlavə et</span></button>`).join('')}</div>` : ''}
   <h2>Kassa bağlama sorğuları</h2>
   <div class="list">${r.close.length ? r.close.map(x => `<button class="item" data-tab="kassa"><span class="grow"><span>${esc(x.usta)}</span><span class="muted">${fmtDate(x.tarix)} · ${esc(x.saat)}</span></span><span class="pill">Kassaya keç</span></button>`).join('') : '<div class="empty">Yeni sorğu yoxdur.</div>'}</div>`;
 };
@@ -1471,6 +1502,15 @@ $app.addEventListener('submit', e => {
         delete MEM[swrKey('supplierLinks', { supplier_id: S.params.supplier_id })];
         S.params.made = r.link_id; S.params.nov = 'yox'; toast('Link yaradıldı', true); return render();
       }
+      case 'orderReceive': {
+        const items = [...f.querySelectorAll('input[name^="q_"]')].map(q => { const id = q.name.slice(2); return { oitem_id: id, miqdar: q.value, qiymet: (f.querySelector(`[name="p_${id}"]`) || {}).value || '' }; });
+        if (items.every(x => !(num(x.miqdar) > 0))) throw new Error('Heç bir mal gəlməyib. Sifarişi ləğv edin və ya say yazın.');
+        const sum = items.reduce((s, x) => s + num(x.miqdar) * num(x.qiymet), 0);
+        if (!confirm(`${items.filter(x => num(x.miqdar) > 0).length} mal stoka əlavə edilsin? Məbləğ: ${money(sum)}`)) return;
+        const r = await api('receiveOrder', { order_id: S.params.data.order_id, tarix: d.tarix, items });
+        toast('Stoka əlavə edildi', true); loadBoot(true).catch(() => {}); MEM = {}; S.products = [];
+        S.history.pop(); return go('orderDetail', { order_id: r.order_id, data: r }, false);
+      }
       case 'publicOrder': {
         const items = [...f.querySelectorAll('input[name^="q_"]')].map(q => { const id = q.name.slice(2); return { oitem_id: id, miqdar: q.value, qiymet: (f.querySelector(`[name="p_${id}"]`) || {}).value || '' }; });
         S.params.r = await api('orderConfirm', { k: S.publicOrderToken, ua: navigator.userAgent, qeyd: d.qeyd || '', items });
@@ -1513,10 +1553,15 @@ $app.addEventListener('submit', e => {
       case 'range': return go(f.dataset.view, { from: d.from, to: d.to, preset: 'x' }, false);
       case 'product': {
         d.aktiv = !!f.aktiv.checked;
-        await api('saveProduct', { product: d }); toast('Yadda saxlanıldı', true); loadBoot(true).catch(() => {}); return back();
+        const list = await api('saveProduct', { product: d }); toast('Yadda saxlanıldı', true); loadBoot(true).catch(() => {});
+        if (S.params.thenBuy && Array.isArray(list)) {
+          S.products = list; const np = list.find(x => x.barkod && x.barkod === String(d.barkod || '').replace(/\s+/g, ''));
+          if (np) { S.history.pop(); return go('purchaseForm', { product_id: np.product_id }, false); }
+        }
+        return back();
       }
       case 'purchase': {
-        const prod = S.products.find(x => x.label === d.product);
+        const prod = S.products.find(x => x.label === d.product) || byBarcode(d.product);
         if (!prod) throw new Error('Malı siyahıdan seçin');
         await api('savePurchase', { purchase: { ...d, product_id: prod.product_id } }); toast('Alış qeyd olundu', true); loadBoot(true).catch(() => {}); return back();
       }
@@ -1552,7 +1597,7 @@ function pickCarObj(car) {
 $app.addEventListener('click', e => {
   const t = e.target.closest('[data-act],[data-tab],[data-fill],[data-preset],[data-movetype],[data-paynov],[data-payfill],[data-limnov],[data-onone]');
   if (!t) return;
-  if (t.dataset.onone) { const q = $app.querySelector(`[name="q_${t.dataset.onone}"]`); if (q) { q.value = '0'; q.focus(); } return; }
+  if (t.dataset.onone) { const q = $app.querySelector(`[name="q_${t.dataset.onone}"]`); if (q) { q.value = '0'; q.focus(); } receiveSum(); return; }
   if (t.dataset.tab) return tab(t.dataset.tab);
   if (t.dataset.fill) {
     const d = jobDraft(), c = jobCalc(d);
@@ -1627,6 +1672,7 @@ $app.addEventListener('click', e => {
         return go('orderDetail', { order_id: r.order_id, data: r }, false);
       }
       case 'orderRefresh': S.params.data = null; return render();
+      case 'orderReceive': return go('orderReceive', { order_id: S.params.data.order_id, data: S.params.data });
       case 'osSend': { const o = S.params.data; if (!o || !o.token) return; window.open(`https://wa.me/${waPhone(o.telefon)}?text=${encodeURIComponent(orderText(o, orderUrl(o.token)))}`, '_blank'); return; }
       case 'osCopy': {
         const o = S.params.data; if (!o || !o.token) return;
@@ -1701,6 +1747,7 @@ $app.addEventListener('click', e => {
         await api('editCashDay', { day_id: id, faktiki: v, sebeb: why, from, to }); toast('Düzəldildi, sonrakı günlər yenidən hesablandı', true); return render();
       }
       case 'newProduct': return go('productForm', {});
+      case 'newProdCode': return go('productForm', { product: { nov: 'yag', vahid: 'qab', aktiv: true, barkod: id }, thenBuy: true });
       case 'editProduct': return go('productForm', { product: S.products.find(p => p.product_id === id) });
       case 'newPurchase': return go('purchaseForm', {});
       case 'buyFor': return go('purchaseForm', { product_id: id });
@@ -1740,6 +1787,7 @@ $app.addEventListener('input', e => {
     el.value = '';
     return addToJob(p);
   }
+  if (S.view === 'orderReceive' && el.closest('form[data-form="orderReceive"]')) { receiveSum(); return; }
   if (el.dataset.orderadd !== undefined) { const p = S.products.find(x => x.label === el.value.trim()); if (p) { el.value = ''; orderAdd(p); } return; }
   if (el.dataset.orow !== undefined) { const r = S.order && S.order.rows[+el.dataset.orow]; if (r) r[el.dataset.of] = el.value; return; }
   if (el.dataset.onote !== undefined) { if (S.order) S.order.qeyd = el.value; return; }
@@ -1874,7 +1922,19 @@ async function onScan(code) {
   const p = byBarcode(code);
   if (S.view === 'job') return p ? addToJob(p) : toast(`Bu barkodla mal tapılmadı: ${code}`);
   if (S.view === 'orderNew') return p ? orderAdd(p) : toast(`Bu barkodla mal tapılmadı: ${code}`);
-  if (S.view === 'purchaseForm') { const f = $app.querySelector('form[data-form="purchase"] [name="product"]'); if (p && f) { f.value = p.label; return; } return toast(`Bu barkodla mal tapılmadı: ${code}`); }
+  if (S.view === 'purchaseForm') {
+    const f = $app.querySelector('form[data-form="purchase"] [name="product"]'), box = $app.querySelector('[data-unknown]');
+    if (box) box.innerHTML = '';
+    if (p && f) { f.value = p.label; const q = $app.querySelector('form[data-form="purchase"] [name="miqdar"]'); if (q) q.focus(); return toast(p.label, true); }
+    if (f) f.value = '';
+    if (box) { box.innerHTML = `<div class="banner warn"><b>Bu barkodla mal tapılmadı: <span data-noi18n>${esc(code)}</span></b><button type="button" class="btn small primary" data-act="newProdCode" data-id="${esc(code)}">Bu barkodla yeni mal yarat</button></div>`; translateDom(box); }
+    return;
+  }
+  if (S.view === 'orderReceive') {
+    const row = p && $app.querySelector(`[data-rrow="${p.product_id}"]`);
+    if (!row) return toast(p ? `${p.label}: bu sifarişdə yoxdur` : `Bu barkodla mal tapılmadı: ${code}`);
+    row.scrollIntoView({ block: 'center' }); const q = row.querySelector('input[name^="q_"]'); if (q) { q.focus(); q.select(); } return;
+  }
   if (isAdmin() && S.view === 'products') return p ? go('productForm', { product: p }) : go('productForm', { product: { nov: 'yag', vahid: 'qab', aktiv: true, barkod: code } });
   if (p) return toast(`${p.label} · qalıq ${grp(p.qaliq, 2)} · ${money(p.tovsiye_qiymet)}`, true);
   toast(`Bu barkodla mal tapılmadı: ${code}`);
