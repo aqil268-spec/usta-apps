@@ -26,6 +26,7 @@ const I = {
   bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
   truck: '<path d="M1 4h13v12H1zM14 9h4l3 3v4h-7"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="17.5" cy="18.5" r="2"/>',
   box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-.5A5.5 5.5 0 0 1 8 14h2a5.5 5.5 0 0 1 5.5 5.5v.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a4.5 4.5 0 0 1 4.5 4.5v.5"/>',
   coins: '<circle cx="9" cy="9" r="6"/><path d="M15.5 9.5a6 6 0 1 1-6 6"/>',
   inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1.3z"/>'
@@ -48,7 +49,7 @@ const MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avq
 const DAYS = ['Bazar', 'Bazar ertəsi', 'Çərşənbə axşamı', 'Çərşənbə', 'Cümə axşamı', 'Cümə', 'Şənbə'];
 const longToday = () => { const d = new Date(); if (LANG !== 'az') return d.toLocaleDateString(LANG === 'en' ? 'en-GB' : 'ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }); return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`; };
 const isAdmin = () => S.user && S.user.rol === 'admin';
-const NOV = { xerc: 'Xərc', usta_odenisi: 'Ustaya ödəniş', tehvil: 'Təhvil', duzelis: 'Düzəliş', techizatci: 'Təchizatçıya ödəniş' };
+const NOV = { ortaq: 'Ortağa verildi', ortaq_qoy: 'Ortaq qoydu', xerc: 'Xərc', usta_odenisi: 'Ustaya ödəniş', tehvil: 'Təhvil', duzelis: 'Düzəliş', techizatci: 'Təchizatçıya ödəniş' };
 const plateFmt = v => { const s = String(v || '').toUpperCase().replace(/[^0-9A-Z]/g, ''); let o = s.slice(0, 2); if (s.length > 2) o += '-' + s.slice(2, 4); if (s.length > 4) o += '-' + s.slice(4, 7); return o; };
 const dictNames = nov => (S.dict[nov] || []).map(x => typeof x === 'string' ? x : x.ad);
 const dictChildren = (nov, parent) => (S.dict[nov] || []).filter(x => typeof x !== 'string' && (!parent || String(x.valideyn).toLowerCase() === String(parent).toLowerCase())).map(x => x.ad);
@@ -61,7 +62,7 @@ function periods() {
 
 // ------------------------------------------------------------- API + keş
 const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'createCarLink', 'createSupplierLink', 'revokeSupplierLink', 'approveCarLink', 'rejectCarLink', 'cancelCarLink', 'linkSubmit', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
-  'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings', 'createOrder', 'orderSeen', 'cancelOrder', 'orderConfirm', 'receiveOrder'];
+  'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings', 'createOrder', 'orderSeen', 'cancelOrder', 'orderConfirm', 'receiveOrder', 'savePartner', 'partnerMove', 'cancelPartnerMove', 'settle', 'cancelSettle'];
 let MEM = {}; try { MEM = JSON.parse(localStorage.getItem('swr') || '{}'); } catch (e) { MEM = {}; }
 
 // Açılış ekranı: servisin adı (son yüklənmədən), ilk ekran hazır olanda və ən az 1,6 s keçəndə gizlənir
@@ -211,8 +212,8 @@ function logout(server, why) {
 const VIEWS = {};
 // Kompüterdə dar (forma, qəbz) ekranlar: mətn sətri çox uzanmasın deyə ortada dar sütun
 // Kompüterdə sol menyuda olan ekranlar: orada "Geri" düyməsi göstərilmir
-const SIDE_ROOTS = ['home', 'report', 'kassa', 'products', 'cars', 'income', 'stock', 'ustaDebts', 'requests', 'carLinks', 'suppliers', 'users', 'settings', 'me', 'more'];
-const NARROW = ['login', 'changePin', 'pinShow', 'receipt', 'cheque', 'carForm', 'productForm', 'purchaseForm', 'supplierForm', 'supplierPay', 'userForm', 'settings', 'payForm', 'linkNew', 'publicCar', 'publicStock', 'publicOrder', 'orderNew', 'orderReceive'];
+const SIDE_ROOTS = ['partners', 'home', 'report', 'kassa', 'products', 'cars', 'income', 'stock', 'ustaDebts', 'requests', 'carLinks', 'suppliers', 'users', 'settings', 'me', 'more'];
+const NARROW = ['login', 'changePin', 'pinShow', 'receipt', 'cheque', 'carForm', 'productForm', 'purchaseForm', 'supplierForm', 'supplierPay', 'userForm', 'settings', 'payForm', 'linkNew', 'publicCar', 'publicStock', 'publicOrder', 'orderNew', 'orderReceive', 'partnerForm', 'partnerMoveForm'];
 // Dil seçimi: yuxarı sağda, sakit rəngdə
 const langSelect = () => `<select class="lang" data-lang data-noi18n aria-label="Dil / Language / Язык">${LANGS.map(([k, l]) => `<option value="${k}" ${LANG === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
 // Sistem pəncərələri də seçilmiş dildə
@@ -256,20 +257,20 @@ function nav() {
   const badge = n => n ? `<span class="badge">${n}</span>` : '';
   const items = admin
     ? [['home', 'chart', 'Hesabat', 1, 1], ['kassa', 'wallet', 'Kassa', 1, 1], ['products', 'drop', 'Mallar', 1, 1], ['cars', 'car', 'Maşınlar', 0, 1],
-       ['sec', 'Hesabatlar'], ['income', 'coins', 'Gəlir və xərc', 0, 1], ['stock', 'box', 'Stok', 0, 1], ['ustaDebts', 'wallet', 'Usta borcları', 0, 1],
+       ['sec', 'Hesabatlar'], ['income', 'coins', 'Gəlir və xərc', 0, 1], ['stock', 'box', 'Stok', 0, 1], ['ustaDebts', 'wallet', 'Usta borcları', 0, 1], ['partners', 'team', 'Ortaqlar', 0, 1],
        ['sec', 'İdarəetmə'], ['requests', 'inbox', 'Sorğular' + badge(req), 0, 1], ['carLinks', 'link', 'Maşın kartı linkləri' + badge(links), 0, 1],
        ['suppliers', 'truck', 'Təchizatçılar' + badge(ord), 0, 1], ['users', 'user', 'İstifadəçilər', 0, 1], ['settings', 'gear', 'Parametrlər', 0, 1],
        ['more', 'more', 'Daha' + badge(pend), 1, 0]]
     : [['home', 'home', 'Əsas', 1, 1], ['cars', 'car', 'Maşınlar', 1, 1], ...(S.user.kassa ? [['kassa', 'wallet', 'Kassa', 1, 1]] : []),
        ['carLinks', 'link', 'Maşın kartı linkləri' + badge(links), 0, 1], ['me', 'user', 'Mən', 1, 1]];
   // Telefonda aktiv düymə
-  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more', orders: 'more', orderNew: 'more', orderDetail: 'more', orderReceive: 'more',
+  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more', partners: 'more', partnerForm: 'more', partnerMoveForm: 'more', orders: 'more', orderNew: 'more', orderDetail: 'more', orderReceive: 'more',
     requests: 'more', ustaDebts: 'more', carLinks: admin ? 'more' : 'cars', linkNew: admin ? 'more' : 'cars', debtList: admin ? 'more' : 'me', payForm: admin ? 'more' : 'me', users: 'more', userForm: 'more', settings: 'more', kassaHistory: 'kassa',
     productForm: 'products', purchaseForm: 'products', purchaseList: 'products' };
   // Kompüterdə aktiv bənd (hər bölmə öz bəndini işıqlandırır)
   const dmap = { carHistory: 'cars', carForm: 'cars', report: 'home', kassaHistory: 'kassa', productForm: 'products', purchaseForm: 'products', purchaseList: 'products',
     supplierForm: 'suppliers', supplierDetail: 'suppliers', supplierLinks: 'suppliers', supplierLinkLog: 'suppliers', supplierPay: 'suppliers', cheque: 'suppliers',
-    linkNew: 'carLinks', userForm: 'users', orders: 'suppliers', orderNew: 'suppliers', orderDetail: 'suppliers', orderReceive: 'suppliers', debtList: admin ? 'ustaDebts' : 'me', payForm: admin ? 'ustaDebts' : 'me' };
+    linkNew: 'carLinks', userForm: 'users', partnerForm: 'partners', partnerMoveForm: 'partners', orders: 'suppliers', orderNew: 'suppliers', orderDetail: 'suppliers', orderReceive: 'suppliers', debtList: admin ? 'ustaDebts' : 'me', payForm: admin ? 'ustaDebts' : 'me' };
   const cur = map[S.view] || S.view, curD = dmap[S.view] || S.view;
   const btns = items.map(([v, i, t, m, d]) => v === 'sec' ? `<div class="side-sec side-only">${i}</div>`
     : `<button data-tab="${v}" class="${m ? '' : 'side-only'} ${d ? '' : 'mob-only'} ${cur === v ? 'm-on' : ''} ${curD === v ? 'd-on' : ''}">${ic(i)}<span>${t}</span></button>`).join('');
@@ -866,6 +867,7 @@ VIEWS.kassa = async () => {
       <div class="stat"><span>Xərclər</span><b>${money(f.xerc)}</b></div>
       <div class="stat"><span>Ustalara ödənib</span><b>${money(f.usta_odenisi)}</b></div>
       <div class="stat"><span>Təchizatçılara</span><b>${money(f.techizatci)}</b></div>
+      ${f.ortaq || f.ortaq_qoy ? `<div class="stat"><span>Ortaqlar (−/+)</span><b>${money(f.ortaq)} / ${money(f.ortaq_qoy)}</b></div>` : ''}
       <div class="stat"><span>Təhvil</span><b>${money(f.tehvil)}</b></div>
     </div>
   </div>
@@ -878,7 +880,7 @@ VIEWS.kassa = async () => {
   </div>${admin ? `<div class="col">
   ${k.hereketler && k.hereketler.length ? `<h2>Hərəkətlər</h2><div class="list">${k.hereketler.map(m => `
     <div class="item" style="cursor:default"><span class="grow"><span>${NOV[m.nov] || m.nov}${m.kateqoriya ? ' · ' + esc(m.kateqoriya) : ''}${m.alan ? ' · ' + esc(m.alan) : ''}</span><span class="muted">${esc(m.saat)}${m.sebeb ? ' · ' + esc(m.sebeb) : ''}</span></span><b>${money(m.mebleg)}</b>
-    ${m.nov !== 'techizatci' ? `<button class="btn small" data-act="editMove" data-id="${esc(m.move_id)}" data-amt="${m.mebleg}">Düzəlt</button>` : ''}</div>`).join('')}</div>` : ''}
+    ${!['techizatci', 'ortaq', 'ortaq_qoy'].includes(m.nov) ? `<button class="btn small" data-act="editMove" data-id="${esc(m.move_id)}" data-amt="${m.mebleg}">Düzəlt</button>` : ''}</div>`).join('')}</div>` : ''}
   ${k.baglanib ? '' : `
   <form class="card" data-form="cashMove">
     <h2>Xərc və ya təhvil</h2>
@@ -907,7 +909,7 @@ VIEWS.kassaHistory = async (p) => {
   <div class="card scroll">${days.length ? `<table>
     <tr><th>Tarix</th><th class="r">Açılış</th><th class="r">Nağd +</th><th class="r">Çıxış</th><th class="r">Olmalı</th><th class="r">Faktiki</th><th class="r">Fərq</th></tr>
     ${days.map(d => `<tr><td>${fmtDate(d.tarix)}${d.baglanib ? '' : '<br><span class="pill bad">açıq</span>'}</td><td class="r">${money(d.acilis)}</td><td class="r">${money(d.axin.nagd_daxil)}</td>
-      <td class="r">${money(d.axin.xerc + d.axin.usta_odenisi + d.axin.tehvil + d.axin.techizatci)}</td><td class="r">${money(d.hesablanan)}</td>
+      <td class="r">${money(d.axin.xerc + d.axin.usta_odenisi + d.axin.tehvil + d.axin.techizatci + (d.axin.ortaq || 0))}</td><td class="r">${money(d.hesablanan)}</td>
       <td class="r">${d.baglanib ? `<button class="btn small" data-act="editDay" data-id="${esc(d.day_id)}" data-amt="${d.faktiki}">${money(d.faktiki)}</button>` : '—'}</td>
       <td class="r" style="color:${d.ferq < 0 ? 'var(--danger)' : 'inherit'}">${d.ferq === null ? '—' : money(d.ferq)}</td></tr>`).join('')}
   </table>` : '<div class="empty">Bu dövrdə hərəkət yoxdur.</div>'}</div>
@@ -1128,6 +1130,90 @@ VIEWS.supplierPay = (p) => `<h1>Təchizatçıya ödəniş</h1>
     <span class="muted">Nağd ödəniş kassadan azalır. Bank köçürməsi kassaya təsir etmir. Borcdan çox ödəniş avans kimi qalır.</span>
     <button class="btn primary big" type="submit">Ödə və çek yarat</button>
   </form>`;
+
+// ------------------------------------------------------------- Ortaqlar: gəlir-xərc-borc bölgüsü
+const PMNOV = { qoyulus: 'Qoydu', goturme: 'Götürdü', duzelis: 'Düzəliş' };
+const signMoney = v => `<b style="color:${v < -0.009 ? 'var(--danger)' : v > 0.009 ? 'var(--ok)' : 'inherit'}">${money(v)}</b>`;
+VIEWS.partners = async (p) => {
+  const d = await cget('partners', p.to ? { to: p.to } : {});
+  S.params.pdata = d;
+  const act = d.partners.filter(x => x.aktiv);
+  const okShares = Math.abs(d.faiz_cem - 100) < 0.01;
+  const head = `<div class="between"><div><div class="muted">Mənfəət bölgüsü</div><h1>Ortaqlar</h1></div><div class="row" style="gap:8px"><button class="btn small" data-act="newPartner">${ic('plus', 18)}Ortaq</button>${d.partners.length ? `<button class="btn small primary" data-act="partnerMoveForm">${ic('wallet', 18)}Pul hərəkəti</button>` : ''}</div></div>`;
+  if (!d.partners.length) return `${head}<div class="card"><b>Hələ ortaq yoxdur</b><span class="muted">Ortaqları və onların payını (%) əlavə edin. Sonra mənfəəti istədiyiniz vaxt bölə, ortağın qoyduğu və götürdüyü pulu yaza bilərsiniz.</span><button class="btn primary" data-act="newPartner">${ic('plus', 18)}Ortaq əlavə et</button></div>`;
+  return `${head}
+  <div class="cols"><div class="col main-col">
+  <div class="card">
+    <div class="between" style="align-items:flex-end"><div><div class="muted">Bölünməmiş mənfəət${d.son_bolgu ? ` · <span>son bölgü</span> ${fmtDate(d.son_bolgu.tarix)}` : ''}</div><div class="big" style="color:${d.bolunen < 0 ? 'var(--danger)' : 'inherit'}">${money(d.bolunen)}</div></div><span class="muted">${fmtDate(d.to)} <span>tarixinə qədər</span></span></div>
+    <div class="grid3">
+      <div class="stat"><span>Müştəri ödənişi</span><b>${money(d.dovr.odenis)}</b></div>
+      <div class="stat"><span>Mal marjası</span><b>${money(d.dovr.marja)}</b></div>
+      <div class="stat"><span>Xərclər</span><b>${money(d.dovr.xerc)}</b></div>
+    </div>
+    ${Math.abs(d.duzelis) > 0.009 ? `<span class="muted"><span>Əvvəlki dövrlərdən düzəliş:</span> ${money(d.duzelis)}</span>` : ''}
+    <span class="muted">Mənfəət müştəri ödədikcə hesablanır: ödənişdəki mal satışı − malın mayası. Usta haqqı və təmir ustaya çatır. Sonra xərclər çıxılır.</span>
+    <form class="row" data-form="partnersTo" style="align-items:flex-end;flex-wrap:wrap"><label class="field" style="flex:1;min-width:160px">Bölgü tarixi<input type="date" name="to" value="${d.to}" max="${today()}" data-autosubmit></label></form>
+    ${okShares ? '' : `<div class="banner warn"><b>Aktiv ortaqların payları cəmi ${d.faiz_cem}%</b><span>Bölgü üçün cəm 100% olmalıdır. Ortağa basıb payı düzəldin.</span></div>`}
+    ${act.length && Math.abs(d.bolunen) >= 0.01 ? `<table><tr><th>Ortaq</th><th class="r">Pay</th><th class="r">Məbləğ</th></tr>${d.plan.map(x => `<tr><td data-noi18n>${esc(x.ad)}</td><td class="r">${grp(x.faiz, 2)}%</td><td class="r">${signMoney(x.mebleg)}</td></tr>`).join('')}</table>
+    <button class="btn primary big" data-act="doSettle" ${okShares ? '' : 'disabled'}>Bölgü et · ${money(d.bolunen)}</button>` : '<div class="empty">Bölünəcək məbləğ yoxdur.</div>'}
+  </div>
+  <h2>Balans</h2>
+  <div class="card scroll"><table>
+    <tr><th>Ortaq</th><th class="r">Pay</th><th class="r">Mənfəət payı</th><th class="r">Qoyduğu</th><th class="r">Götürdüyü</th><th class="r">Düzəliş</th><th class="r">Balans</th></tr>
+    ${d.partners.map(x => `<tr data-act="editPartner" data-id="${esc(x.partner_id)}" style="cursor:pointer"><td><span data-noi18n>${esc(x.ad)}</span>${x.aktiv ? '' : ' <span class="pill muted-pill">deaktiv</span>'}</td><td class="r">${grp(x.faiz, 2)}%</td><td class="r">${money(x.menfeet_payi)}</td><td class="r">${money(x.qoydu)}</td><td class="r">${money(x.goturdu)}</td><td class="r">${money(x.duzelis)}</td><td class="r">${signMoney(x.balans)}</td></tr>`).join('')}
+  </table>
+  <span class="muted">Balans = mənfəət payı + qoyduğu − götürdüyü + düzəliş. Müsbət: biznes ortağa borcludur. Mənfi: ortaq payından çox götürüb.</span></div>
+  ${d.transfers.length ? `<div class="banner info"><b>Ortaqlar arasında bərabərləşmə</b>${d.transfers.map(t => `<span><b data-noi18n>${esc(t.kimden)}</b> → <b data-noi18n>${esc(t.kime)}</b>: ${money(t.mebleg)}</span>`).join('')}</div>` : ''}
+  ${d.kassa !== null && d.borc_balans - d.kassa > 0.009 ? `<div class="banner warn"><b>Ortaqlara borc kassadakı nağddan çoxdur</b><span><span>Ortaqlara borc:</span> ${money(d.borc_balans)} · <span>Kassada:</span> ${money(d.kassa)}</span><span>Fərq mal stokunda, müştəri borcunda və ya bankdadır.</span></div>` : ''}
+  </div><div class="col">
+  <h2>Bölgülər</h2>
+  <div class="list">${d.bolguler.length ? d.bolguler.map((x, ix) => `
+    <div class="card" style="gap:6px;padding:12px">
+      <div class="between"><span><b>${fmtDate(x.son_tarix)}</b> <span class="muted">· ${fullDT(x.tarix_saat)}</span></span>${x.status === 'legv' ? '<span class="pill muted-pill">Ləğv edilib</span>' : signMoney(x.menfeet)}</div>
+      <span class="muted">${x.lines.map(l => `<span data-noi18n>${esc(l.ad)}</span> ${grp(l.faiz, 2)}%: ${money(l.mebleg)}`).join(' · ')}</span>
+      ${x.status !== 'legv' && x.settle_id === (d.bolguler.find(y => y.status !== 'legv') || {}).settle_id ? `<button class="btn small danger" data-act="cancelSettle" data-id="${esc(x.settle_id)}">Bu bölgünü ləğv et</button>` : ''}
+    </div>`).join('') : '<div class="empty">Hələ bölgü yoxdur.</div>'}</div>
+  <h2>Pul hərəkətləri</h2>
+  <div class="list">${d.hereketler.length ? d.hereketler.map(m => `
+    <div class="item" style="cursor:default;${m.status === 'legv' ? 'opacity:.55' : ''}"><span class="grow"><span><span data-noi18n>${esc(m.ad)}</span> · ${PMNOV[m.nov] || m.nov}${m.menbe === 'kassa' ? ' · <span>kassa</span>' : ''}</span><span class="muted">${fmtDate(m.tarix)}${m.sebeb ? ' · <span data-noi18n>' + esc(m.sebeb) + '</span>' : ''}${m.status === 'legv' ? ' · <span>ləğv edilib</span>' : ''}</span></span>
+      <b>${m.nov === 'goturme' ? '−' : (m.nov === 'qoyulus' ? '+' : '')}${money(m.mebleg)}</b>${m.status !== 'legv' ? `<button class="icon-btn" data-act="cancelPMove" data-id="${esc(m.pmove_id)}" aria-label="Ləğv et">${ic('x', 16)}</button>` : ''}</div>`).join('') : '<div class="empty">Hərəkət yoxdur.</div>'}</div>
+  </div></div>`;
+};
+
+VIEWS.partnerForm = (p) => {
+  const x = p.partner || { aktiv: true };
+  return `<h1>${x.partner_id ? 'Ortağı düzəlt' : 'Yeni ortaq'}</h1>
+  <form class="card" data-form="partner">
+    <input type="hidden" name="partner_id" value="${esc(x.partner_id || '')}">
+    <label class="field">Ad, soyad<input name="ad" value="${esc(x.ad || '')}" required autofocus></label>
+    <label class="field">Telefon<input name="telefon" type="tel" inputmode="tel" value="${esc(x.telefon || '')}" placeholder="istəyə bağlı"></label>
+    <label class="field">Mənfəətdə payı (%)<input name="pay_faiz" inputmode="decimal" value="${esc(x.faiz ?? '')}" placeholder="məs. 50" required></label>
+    <label class="field">Qeyd<input name="qeyd" value="${esc(x.qeyd || '')}" placeholder="istəyə bağlı"></label>
+    <label class="row" style="font-size:14px"><input type="checkbox" name="aktiv" ${x.aktiv ? 'checked' : ''} style="width:22px;min-height:22px">Aktiv (bölgüyə daxildir)</label>
+    <span class="muted">Payı dəyişsəniz, yeni pay yalnız növbəti bölgüdən işləyir. Köhnə bölgülər dəyişmir. Ortaq usta da ola bilər: usta haqqını ayrıca alır.</span>
+    <button class="btn primary big" type="submit">Yadda saxla</button>
+  </form>`;
+};
+
+VIEWS.partnerMoveForm = (p) => {
+  const d = S.params.pdata || { partners: [] };
+  const nov = p.nov || 'goturme', src = p.menbe || 'kassa';
+  const hint = { goturme: 'Ortaq biznesdən pul götürdü (öz payından).', qoyulus: 'Ortaq biznesə pul qoydu: kassaya nağd, avadanlıq, icarə, öz cibindən ödədiyi xərc və s. Balansda qalır.', duzelis: 'Balansı əl ilə düzəltmək üçün. Mənfi məbləğ balansı azaldır. Səbəb məcburidir.' }[nov];
+  return `<h1>Ortağın pul hərəkəti</h1>
+  <form class="card" data-form="partnerMove">
+    <label class="field">Ortaq<select name="partner_id" required>${d.partners.filter(x => x.aktiv || x.partner_id === p.partner_id).map(x => `<option value="${esc(x.partner_id)}" ${p.partner_id === x.partner_id ? 'selected' : ''}>${esc(x.ad)}</option>`).join('')}</select></label>
+    <div class="seg" role="group" aria-label="Növ">${[['goturme', 'Götürdü'], ['qoyulus', 'Qoydu'], ['duzelis', 'Düzəliş']].map(([k, l]) => `<button type="button" data-pmnov="${k}" class="${nov === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <span class="muted">${hint}</span>
+    ${nov !== 'duzelis' ? `<div class="seg" role="group" aria-label="Mənbə">${[['kassa', nov === 'goturme' ? 'Kassadan nağd' : 'Kassaya nağd'], ['kenar', 'Kənar (bank, kart, öz cibindən)']].map(([k, l]) => `<button type="button" data-pmsrc="${k}" class="${src === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <span class="muted">${src === 'kassa' ? 'Kassanın nağd qalığı da dəyişir.' : 'Kassaya təsir etmir.'}</span>` : ''}
+    <div class="grid2">
+      <label class="field">Məbləğ (₼)<input name="mebleg" inputmode="decimal" required ${nov === 'duzelis' ? 'placeholder="məs. -20"' : ''}></label>
+      <label class="field">Tarix<input type="date" name="tarix" value="${today()}" max="${today()}"></label>
+    </div>
+    <label class="field">Səbəb / qeyd<input name="sebeb" ${nov === 'duzelis' ? 'required' : ''} placeholder="${nov === 'qoyulus' ? 'məs. Podyomnik' : 'istəyə bağlı'}"></label>
+    <button class="btn primary big" type="submit">Yadda saxla</button>
+  </form>`;
+};
 
 // ------------------------------------------------------------- Təchizatçıya mal sifarişi (link ilə)
 const orderUrl = token => location.origin + location.pathname + '#sifaris=' + token;
@@ -1401,6 +1487,7 @@ VIEWS.more = async () => {
     ${item('stock', 'box', 'Stok', 'Qalıq, maya, satış dəyəri')}
     ${item('suppliers', 'truck', 'Təchizatçılar', 'Borc, ödəniş, çek')}
     ${item('ustaDebts', 'wallet', 'Usta borcları', 'Ödənilməyən işlər')}
+    ${item('partners', 'team', 'Ortaqlar', 'Mənfəət bölgüsü, qoyulan və götürülən pul')}
     ${item('users', 'user', 'İstifadəçilər', 'Usta, usta haqqı, kassa icazəsi')}
     ${item('cars', 'car', 'Maşınlar', 'Axtarış və tarixçə')}
     ${item('settings', 'gear', 'Parametrlər', 'Servis, qəbz, interval, xatırlatma')}
@@ -1565,6 +1652,16 @@ $app.addEventListener('submit', e => {
         if (!prod) throw new Error('Malı siyahıdan seçin');
         await api('savePurchase', { purchase: { ...d, product_id: prod.product_id } }); toast('Alış qeyd olundu', true); loadBoot(true).catch(() => {}); return back();
       }
+      case 'partnersTo': return go('partners', { to: d.to }, false);
+      case 'partner': {
+        await api('savePartner', { partner: { ...d, aktiv: !!f.aktiv.checked } }); toast('Yadda saxlanıldı', true); return back();
+      }
+      case 'partnerMove': {
+        const nov = S.params.nov || 'goturme', menbe = S.params.menbe || 'kassa';
+        const pn = (S.params.pdata.partners.find(x => x.partner_id === d.partner_id) || {}).ad || '';
+        if (!confirm(`${pn} · ${tr(PMNOV[nov])}${nov !== 'duzelis' ? ' · ' + tr(menbe === 'kassa' ? 'kassa' : 'kənar') : ''}: ${money(d.mebleg)}. Yadda saxlansın?`)) return;
+        await api('partnerMove', { ...d, nov, menbe }); toast('Yadda saxlanıldı', true); return back();
+      }
       case 'supplier': {
         d.aktiv = !!f.aktiv.checked;
         await api('saveSupplier', { supplier: d }); toast('Yadda saxlanıldı', true); return back();
@@ -1595,8 +1692,14 @@ function pickCarObj(car) {
 
 // ------------------------------------------------------------- Hadisələr: kliklər
 $app.addEventListener('click', e => {
-  const t = e.target.closest('[data-act],[data-tab],[data-fill],[data-preset],[data-movetype],[data-paynov],[data-payfill],[data-limnov],[data-onone]');
+  const t = e.target.closest('[data-act],[data-tab],[data-fill],[data-preset],[data-movetype],[data-paynov],[data-payfill],[data-limnov],[data-onone],[data-pmnov],[data-pmsrc]');
   if (!t) return;
+  if (t.dataset.pmnov || t.dataset.pmsrc) {
+    const f = t.closest('form'), keep = formData(f);
+    if (t.dataset.pmnov) S.params.nov = t.dataset.pmnov; else S.params.menbe = t.dataset.pmsrc;
+    S.params.partner_id = keep.partner_id;
+    return render().then(() => { const g = $app.querySelector('form[data-form="partnerMove"]'); if (g) ['mebleg', 'tarix', 'sebeb'].forEach(k => { if (keep[k] && g[k]) g[k].value = keep[k]; }); });
+  }
   if (t.dataset.onone) { const q = $app.querySelector(`[name="q_${t.dataset.onone}"]`); if (q) { q.value = '0'; q.focus(); } receiveSum(); return; }
   if (t.dataset.tab) return tab(t.dataset.tab);
   if (t.dataset.fill) {
@@ -1747,6 +1850,16 @@ $app.addEventListener('click', e => {
         await api('editCashDay', { day_id: id, faktiki: v, sebeb: why, from, to }); toast('Düzəldildi, sonrakı günlər yenidən hesablandı', true); return render();
       }
       case 'newProduct': return go('productForm', {});
+      case 'newPartner': return go('partnerForm', {});
+      case 'editPartner': return go('partnerForm', { partner: S.params.pdata.partners.find(x => x.partner_id === id) });
+      case 'partnerMoveForm': { const pd = S.params.pdata; return go('partnerMoveForm', { pdata: pd, nov: 'goturme', menbe: 'kassa' }); }
+      case 'doSettle': {
+        const pd = S.params.pdata;
+        if (!confirm(`${fmtDate(pd.to)} tarixinə qədər ${money(pd.bolunen)} ortaqlar arasında bölünsün?\n` + pd.plan.map(x => `${x.ad} ${x.faiz}%: ${money(x.mebleg)}`).join('\n'))) return;
+        await api('settle', { to: pd.to, gozlenen: pd.bolunen }); toast('Bölgü edildi', true); return go('partners', {}, false);
+      }
+      case 'cancelSettle': { const why = prompt('Bölgünü ləğv etmək səbəbi:'); if (!why) return; await api('cancelSettle', { settle_id: id, sebeb: why }); toast('Bölgü ləğv edildi', true); return render(); }
+      case 'cancelPMove': { const why = prompt('Hərəkəti ləğv etmək səbəbi:'); if (!why) return; await api('cancelPartnerMove', { pmove_id: id, sebeb: why }); toast('Ləğv edildi', true); return render(); }
       case 'newProdCode': return go('productForm', { product: { nov: 'yag', vahid: 'qab', aktiv: true, barkod: id }, thenBuy: true });
       case 'editProduct': return go('productForm', { product: S.products.find(p => p.product_id === id) });
       case 'newPurchase': return go('purchaseForm', {});
