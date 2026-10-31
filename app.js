@@ -26,6 +26,7 @@ const I = {
   bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
   truck: '<path d="M1 4h13v12H1zM14 9h4l3 3v4h-7"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="17.5" cy="18.5" r="2"/>',
   box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  receipt: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
   team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20v-.5A5.5 5.5 0 0 1 8 14h2a5.5 5.5 0 0 1 5.5 5.5v.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a4.5 4.5 0 0 1 4.5 4.5v.5"/>',
   coins: '<circle cx="9" cy="9" r="6"/><path d="M15.5 9.5a6 6 0 1 1-6 6"/>',
   inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6z"/>',
@@ -62,7 +63,7 @@ function periods() {
 
 // ------------------------------------------------------------- API + keş
 const WRITES = ['changePin', 'closeStockRequest', 'forceLogout', 'createCarLink', 'createSupplierLink', 'revokeSupplierLink', 'approveCarLink', 'rejectCarLink', 'cancelCarLink', 'linkSubmit', 'saveCar', 'saveJob', 'payJob', 'cancelJob', 'requestClose', 'stockRequest', 'addCashMove', 'closeDay', 'editCashDay', 'editCashMove',
-  'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings', 'createOrder', 'orderSeen', 'cancelOrder', 'orderConfirm', 'receiveOrder', 'savePartner', 'partnerMove', 'cancelPartnerMove', 'settle', 'cancelSettle'];
+  'saveProduct', 'savePurchase', 'saveSupplier', 'paySupplier', 'saveUser', 'resetPin', 'saveSettings', 'createOrder', 'orderSeen', 'cancelOrder', 'orderConfirm', 'receiveOrder', 'savePartner', 'partnerMove', 'cancelPartnerMove', 'settle', 'cancelSettle', 'deleteSupplierPayment'];
 let MEM = {}; try { MEM = JSON.parse(localStorage.getItem('swr') || '{}'); } catch (e) { MEM = {}; }
 
 // Açılış ekranı: servisin adı (son yüklənmədən), ilk ekran hazır olanda və ən az 1,6 s keçəndə gizlənir
@@ -212,7 +213,7 @@ function logout(server, why) {
 const VIEWS = {};
 // Kompüterdə dar (forma, qəbz) ekranlar: mətn sətri çox uzanmasın deyə ortada dar sütun
 // Kompüterdə sol menyuda olan ekranlar: orada "Geri" düyməsi göstərilmir
-const SIDE_ROOTS = ['partners', 'home', 'report', 'kassa', 'products', 'cars', 'income', 'stock', 'ustaDebts', 'requests', 'carLinks', 'suppliers', 'users', 'settings', 'me', 'more'];
+const SIDE_ROOTS = ['receipts', 'partners', 'home', 'report', 'kassa', 'products', 'cars', 'income', 'stock', 'ustaDebts', 'requests', 'carLinks', 'suppliers', 'users', 'settings', 'me', 'more'];
 const NARROW = ['login', 'changePin', 'pinShow', 'receipt', 'cheque', 'carForm', 'productForm', 'purchaseForm', 'supplierForm', 'supplierPay', 'userForm', 'settings', 'payForm', 'linkNew', 'publicCar', 'publicStock', 'publicOrder', 'orderNew', 'orderReceive', 'partnerForm', 'partnerMoveForm'];
 // Dil seçimi: yuxarı sağda, sakit rəngdə
 const langSelect = () => `<select class="lang" data-lang data-noi18n aria-label="Dil / Language / Язык">${LANGS.map(([k, l]) => `<option value="${k}" ${LANG === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
@@ -257,14 +258,14 @@ function nav() {
   const badge = n => n ? `<span class="badge">${n}</span>` : '';
   const items = admin
     ? [['home', 'chart', 'Hesabat', 1, 1], ['kassa', 'wallet', 'Kassa', 1, 1], ['products', 'drop', 'Mallar', 1, 1], ['cars', 'car', 'Maşınlar', 0, 1],
-       ['sec', 'Hesabatlar'], ['income', 'coins', 'Gəlir və xərc', 0, 1], ['stock', 'box', 'Stok', 0, 1], ['ustaDebts', 'wallet', 'Usta borcları', 0, 1], ['partners', 'team', 'Ortaqlar', 0, 1],
+       ['sec', 'Hesabatlar'], ['income', 'coins', 'Gəlir və xərc', 0, 1], ['stock', 'box', 'Stok', 0, 1], ['receipts', 'receipt', 'Qəbzlər', 0, 1], ['ustaDebts', 'wallet', 'Usta borcları', 0, 1], ['partners', 'team', 'Ortaqlar', 0, 1],
        ['sec', 'İdarəetmə'], ['requests', 'inbox', 'Sorğular' + badge(req), 0, 1], ['carLinks', 'link', 'Maşın kartı linkləri' + badge(links), 0, 1],
        ['suppliers', 'truck', 'Təchizatçılar' + badge(ord), 0, 1], ['users', 'user', 'İstifadəçilər', 0, 1], ['settings', 'gear', 'Parametrlər', 0, 1],
        ['more', 'more', 'Daha' + badge(pend), 1, 0]]
     : [['home', 'home', 'Əsas', 1, 1], ['cars', 'car', 'Maşınlar', 1, 1], ...(S.user.kassa ? [['kassa', 'wallet', 'Kassa', 1, 1]] : []),
        ['carLinks', 'link', 'Maşın kartı linkləri' + badge(links), 0, 1], ['me', 'user', 'Mən', 1, 1]];
   // Telefonda aktiv düymə
-  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more', partners: 'more', partnerForm: 'more', partnerMoveForm: 'more', orders: 'more', orderNew: 'more', orderDetail: 'more', orderReceive: 'more',
+  const map = { carHistory: 'cars', carForm: 'cars', report: 'home', income: 'more', stock: 'more', suppliers: 'more', supplierForm: 'more', supplierDetail: 'more', supplierLinks: 'more', supplierLinkLog: 'more', supplierPay: 'more', cheque: 'more', receipts: 'more', partners: 'more', partnerForm: 'more', partnerMoveForm: 'more', orders: 'more', orderNew: 'more', orderDetail: 'more', orderReceive: 'more',
     requests: 'more', ustaDebts: 'more', carLinks: admin ? 'more' : 'cars', linkNew: admin ? 'more' : 'cars', debtList: admin ? 'more' : 'me', payForm: admin ? 'more' : 'me', users: 'more', userForm: 'more', settings: 'more', kassaHistory: 'kassa',
     productForm: 'products', purchaseForm: 'products', purchaseList: 'products' };
   // Kompüterdə aktiv bənd (hər bölmə öz bəndini işıqlandırır)
@@ -733,11 +734,13 @@ VIEWS.receipt = async (p) => {
   const r = p.data || await cget('receipt', { job_id: p.job_id });
   S.params.data = r;
   const j = r.job;
-  const canCancel = j.status !== 'legv' && (isAdmin() || (j.user_id === S.user.id && j.tarix === today()));
+  const canCancel = j.status !== 'legv' && !isAdmin() && j.user_id === S.user.id && j.tarix === today();
+  const canDelete = j.status !== 'legv' && isAdmin();
   const canPay = j.status !== 'legv' && j.borc > 0 && (isAdmin() || j.user_id === S.user.id);
   const paid = j.borc <= 0 && j.status !== 'legv';
   const stamp = paid && S.params.stamp;
   return `
+  ${j.status === 'legv' ? `<div class="banner bad"><b>Bu qəbz silinib (ləğv edilib)</b><span>Stok, kassa və borc geri qaytarılıb.</span></div>` : ''}
   ${p.fresh ? `<div class="between"><span class="pill ok">Yadda saxlanıldı</span><button class="btn small" data-act="home">Əsasa qayıt</button></div>` : ''}
   ${(r.warnings || []).map(w => stockBox(w.product_id, `<b>${esc(w.ad)}</b>: anbarda ${grp(w.qaliq, 2)} ${esc(w.vahid)} qalıb.`)).join('')}
   ${j.borc > 0 && j.status !== 'legv' ? `<div class="banner bad"><b>Ödənilməyib: ${money(j.borc)} borc</b>${canPay ? `<button class="btn small primary" data-act="payDebt" data-id="${esc(j.job_id)}">Ödənişi qəbul et</button>` : ''}</div>` : ''}
@@ -745,7 +748,8 @@ VIEWS.receipt = async (p) => {
   ${paid ? `<label class="check"><input type="checkbox" data-stamp ${S.params.stamp ? 'checked' : ''}>Ödənildi — qəbzə möhür vur</label>` : ''}
   <button class="btn primary big" data-act="sharePdf">${ic('share')}Qəbzi PDF kimi göndər</button>
   <button class="btn" data-act="whatsapp">WhatsApp-a mətn kimi göndər</button>
-  ${canCancel ? `<button class="btn danger" data-act="cancelJob">İşi ləğv et</button>` : ''}`;
+  ${canCancel ? `<button class="btn danger" data-act="cancelJob">İşi ləğv et</button>` : ''}
+  ${canDelete ? `<button class="btn danger" data-act="deleteJob">${ic('x', 18)}Qəbzi sil</button><span class="muted">Yalnız Admin. Stok, kassa, borc və ustanın payı geri qaytarılır. Qeyd jurnalda qalır.</span>` : ''}`;
 };
 
 function receiptText(r) {
@@ -1131,6 +1135,26 @@ VIEWS.supplierPay = (p) => `<h1>Təchizatçıya ödəniş</h1>
     <button class="btn primary big" type="submit">Ödə və çek yarat</button>
   </form>`;
 
+// ------------------------------------------------------------- Admin: Qəbzlər (bütün işlər)
+VIEWS.receipts = async (p) => {
+  const { key, range } = pickRange(p);
+  const d = await cget('jobsList', { from: range[0], to: range[1] });
+  S.params.jl = d.rows;
+  const act = d.rows.filter(x => x.status !== 'legv');
+  return `<div><div class="muted">Bütün ustaların işləri</div><h1>Qəbzlər</h1></div>
+  ${presetSeg(key, 'receipts')}
+  ${rangeForm(range[0], range[1], 'receipts')}
+  <div class="grid3"><div class="stat"><span>Qəbz</span><b>${act.length}</b></div><div class="stat"><span>Cəmi</span><b>${money(act.reduce((s, x) => s + x.umumi, 0))}</b></div><div class="stat"><span>Borc</span><b style="color:${act.some(x => x.borc > 0) ? 'var(--danger)' : 'inherit'}">${money(act.reduce((s, x) => s + x.borc, 0))}</b></div></div>
+  <form class="search" role="search">${ic('search', 18)}<input data-rcptfilter placeholder="Qəbz №, nömrə, müştəri və ya usta" aria-label="Qəbz axtar"></form>
+  <div class="list" data-rcptlist>${rcptItems(d.rows)}</div>`;
+};
+const rcptItems = rows => rows.length ? rows.map(x => `
+  <button class="item" data-act="openReceipt" data-id="${esc(x.job_id)}" style="${x.status === 'legv' ? 'opacity:.55' : ''}">
+    <span class="plate">${esc(x.nomre)}</span>
+    <span class="grow"><span>№${esc(x.qebz)} · ${esc(x.marka || '')}${x.musteri ? ' · ' + esc(x.musteri) : ''}</span><span class="muted">${fullDT(x.tarix_saat)} · <span data-noi18n>${esc(x.usta)}</span></span></span>
+    <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><b style="font-size:14px">${money(x.umumi)}</b>${x.status === 'legv' ? '<span class="pill muted-pill">Silinib</span>' : x.borc > 0 ? `<span class="pill bad">borc ${money(x.borc)}</span>` : ''}</span>
+  </button>`).join('') : '<div class="empty">Bu dövrdə qəbz yoxdur.</div>';
+
 // ------------------------------------------------------------- Ortaqlar: gəlir-xərc-borc bölgüsü
 const PMNOV = { qoyulus: 'Qoydu', goturme: 'Götürdü', duzelis: 'Düzəliş' };
 const signMoney = v => `<b style="color:${v < -0.009 ? 'var(--danger)' : v > 0.009 ? 'var(--ok)' : 'inherit'}">${money(v)}</b>`;
@@ -1447,8 +1471,10 @@ function chequeHtml(c) {
 VIEWS.cheque = async (p) => {
   const c = p.data || await cget('supplierCheque', { payment_id: p.payment_id });
   S.params.data = c;
+  if (c.odenis.silinib) return `<div class="banner bad"><b>Bu çek silinib</b><span data-noi18n>${esc(c.odenis.qeyd || '')}</span></div>`;
   return `${p.fresh ? '<span class="pill ok">Ödəniş qeyd olundu</span>' : ''}${chequeHtml(c)}
-  <button class="btn primary big" data-act="shareCheque">${ic('share')}Çeki PDF kimi göndər</button>`;
+  <button class="btn primary big" data-act="shareCheque">${ic('share')}Çeki PDF kimi göndər</button>
+  ${isAdmin() && c.odenis.payment_id ? `<button class="btn danger" data-act="deleteCheque">${ic('x', 18)}Çeki sil</button><span class="muted">Ödəniş silinir: təchizatçının borcu geri qayıdır, nağd idisə pul kassaya qayıdır. Qeyd jurnalda qalır.</span>` : ''}`;
 };
 
 // ------------------------------------------------------------- Admin: Sorğular, borclar, Daha
@@ -1486,6 +1512,7 @@ VIEWS.more = async () => {
     ${item('income', 'coins', 'Gəlir və xərc', 'Gəlir-xərc hesabatı')}
     ${item('stock', 'box', 'Stok', 'Qalıq, maya, satış dəyəri')}
     ${item('suppliers', 'truck', 'Təchizatçılar', 'Borc, ödəniş, çek')}
+    ${item('receipts', 'receipt', 'Qəbzlər', 'Bütün işlər, axtarış, qəbzi silmək')}
     ${item('ustaDebts', 'wallet', 'Usta borcları', 'Ödənilməyən işlər')}
     ${item('partners', 'team', 'Ortaqlar', 'Mənfəət bölgüsü, qoyulan və götürülən pul')}
     ${item('users', 'user', 'İstifadəçilər', 'Usta, usta haqqı, kassa icazəsi')}
@@ -1828,6 +1855,18 @@ $app.addEventListener('click', e => {
         return shareFile(file, `${r.settings.servis_adi} · Qəbz №${r.job.qebz} · ${money(r.job.umumi)}`);
       }
       case 'whatsapp': { const r = S.params.data; window.open(`https://wa.me/${waPhone(r.car.telefon)}?text=${encodeURIComponent(receiptText(r))}`, '_blank'); return; }
+      case 'deleteJob': {
+        const r = S.params.data;
+        const why = prompt(`Qəbz №${r.job.qebz} (${r.car.nomre || ''}, ${money(r.job.umumi)}) silinsin? Səbəbi yazın:`); if (!why) return;
+        await api('cancelJob', { job_id: r.job.job_id, sebeb: why }); toast('Qəbz silindi', true); loadBoot(true).catch(() => {});
+        return back();
+      }
+      case 'deleteCheque': {
+        const c = S.params.data;
+        const why = prompt(`Çek №${c.odenis.cek} (${c.supplier.ad}, ${money(c.odenis.mebleg)}) silinsin? Borc geri qayıdacaq${c.odenis.nov === 'nagd' ? ', pul kassaya qayıdacaq' : ''}. Səbəbi yazın:`); if (!why) return;
+        await api('deleteSupplierPayment', { payment_id: c.odenis.payment_id, sebeb: why }); toast('Çek silindi', true);
+        return back();
+      }
       case 'cancelJob': {
         const why = prompt('İşi ləğv etmək səbəbi:'); if (why === null) return;
         await api('cancelJob', { job_id: S.params.data.job.job_id, sebeb: why }); toast('İş ləğv edildi', true); S.history = []; return go('home', {}, false);
@@ -1904,6 +1943,11 @@ $app.addEventListener('input', e => {
   if (el.dataset.orderadd !== undefined) { const p = S.products.find(x => x.label === el.value.trim()); if (p) { el.value = ''; orderAdd(p); } return; }
   if (el.dataset.orow !== undefined) { const r = S.order && S.order.rows[+el.dataset.orow]; if (r) r[el.dataset.of] = el.value; return; }
   if (el.dataset.onote !== undefined) { if (S.order) S.order.qeyd = el.value; return; }
+  if (el.dataset.rcptfilter !== undefined) {
+    const q = el.value.toLowerCase().replace(/[\s-]/g, ''), box = $app.querySelector('[data-rcptlist]');
+    if (box) { box.innerHTML = rcptItems((S.params.jl || []).filter(x => (x.qebz + x.nomre + x.musteri + x.usta + x.marka).toLowerCase().replace(/[\s-]/g, '').includes(q))); translateDom(box); }
+    return;
+  }
   if (el.dataset.prodfilter !== undefined) { const q = el.value.toLowerCase(); const box = $app.querySelector('[data-prodlist]'); if (box) box.innerHTML = prodItems(S.products.filter(p => p.label.toLowerCase().includes(q))); return; }
   if (S.view === 'cars' && el.closest('[data-form="carSearch"]')) {
     const pick = S.params.pick, list = filterCars(S.cars || [], el.value);
