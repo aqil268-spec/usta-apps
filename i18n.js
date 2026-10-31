@@ -336,7 +336,7 @@ const I18N_DICT = {
   'Stoka əlavə gözləyən sifarişlər': ['Orders waiting to be added to stock', 'Заказы, ожидающие оприходования'],
   'Mal (və ya barkodu oxudun)': ['Item (or scan barcode)', 'Товар (или сканируйте штрихкод)'], 'Axtar və ya barkod': ['Search or barcode', 'Поиск или штрихкод'],
   'Bu barkodla yeni mal yarat': ['Create a new item with this barcode', 'Создать товар с этим штрихкодом'], 'Bu barkodla mal tapılmadı:': ['No item with this barcode:', 'Товар с этим штрихкодом не найден:'],
-  'Ortaqlar': ['Partners', 'Партнёры'], 'Ortaq': ['Partner', 'Партнёр'], 'Mənfəət bölgüsü': ['Profit split', 'Раздел прибыли'], 'Pul hərəkəti': ['Money movement', 'Движение денег'],
+  'Borc silindi': ['Debt written off', 'Долг списан'], 'Ortaqlar': ['Partners', 'Партнёры'], 'Ortaq': ['Partner', 'Партнёр'], 'Mənfəət bölgüsü': ['Profit split', 'Раздел прибыли'], 'Pul hərəkəti': ['Money movement', 'Движение денег'],
   'Mənfəət bölgüsü, qoyulan və götürülən pul': ['Profit split, money put in and taken out', 'Раздел прибыли, вложенные и снятые деньги'],
   'Hələ ortaq yoxdur': ['No partners yet', 'Партнёров пока нет'], 'Ortaq əlavə et': ['Add partner', 'Добавить партнёра'],
   'Ortaqları və onların payını (%) əlavə edin. Sonra mənfəəti istədiyiniz vaxt bölə, ortağın qoyduğu və götürdüyü pulu yaza bilərsiniz.': ['Add partners and their share (%). Then split profit any time and record money each partner puts in or takes out.', 'Добавьте партнёров и их долю (%). Затем делите прибыль в любое время и записывайте вложенные и снятые деньги.'],

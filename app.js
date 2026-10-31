@@ -1004,7 +1004,7 @@ const prodItems = list => list.length ? list.map(p => `
 
 VIEWS.productForm = (p) => {
   const x = p.product || { nov: 'yag', vahid: 'qab', aktiv: true };
-  const tara = ['1 L', '2 L', '4 L', '5 L', 'Boçka', 'Ədəd'];
+  const tara = ['1 L', '2 L', '4 L', '5 L', '6 L', 'Boçka', 'Ədəd'];
   return `<h1>${x.product_id ? 'Malı düzəlt' : 'Yeni mal'}</h1>
   <form class="card" data-form="product">
     <input type="hidden" name="product_id" value="${esc(x.product_id || '')}">
@@ -1114,7 +1114,7 @@ VIEWS.supplierDetail = async (p) => {
     ${d.mallar.map(m => `<tr><td>${esc(m.ad)}</td><td class="r">${grp(m.alinan, 2)}</td><td class="r">${grp(m.satilan, 2)}</td><td class="r">${money(m.mebleg)}</td><td class="r">${grp(m.stok, 2)}</td></tr>`).join('')}</table>` : '<div class="empty">Bu təchizatçıdan alış yoxdur.</div>'}</div>
   <h2>Ödənişlər</h2>
   <div class="list">${d.odenisler.length ? d.odenisler.map(o => `
-    <button class="item" data-act="openCheque" data-id="${esc(o.payment_id)}"><span class="grow"><span>Çek №${esc(o.cek)} · ${o.nov === 'bank' ? 'Bank' : 'Nağd'}</span><span class="muted">${fmtDate(o.tarix.slice(0, 10))} ${esc(o.tarix.slice(11))}${o.qeyd ? ' · ' + esc(o.qeyd) : ''}</span></span><b>${money(o.mebleg)}</b></button>`).join('') : '<div class="empty">Ödəniş yoxdur.</div>'}</div>
+    <button class="item" data-act="openCheque" data-id="${esc(o.payment_id)}"><span class="grow"><span>Çek №${esc(o.cek)} · ${o.nov === 'bank' ? 'Bank' : o.nov === 'silinme' ? 'Borc silindi' : 'Nağd'}</span><span class="muted">${fmtDate(o.tarix.slice(0, 10))} ${esc(o.tarix.slice(11))}${o.qeyd ? ' · ' + esc(o.qeyd) : ''}</span></span><b>${money(o.mebleg)}</b></button>`).join('') : '<div class="empty">Ödəniş yoxdur.</div>'}</div>
   ${d.satislar.length ? `<h2>Son satışlar</h2><div class="card scroll"><table><tr><th>Tarix</th><th>Mal</th><th class="r">Miqdar</th><th class="r">Məbləğ</th></tr>
     ${d.satislar.map(x => `<tr><td>${fmtDate(x.tarix)}</td><td>${esc(x.ad)}</td><td class="r">${grp(x.miqdar, 2)}</td><td class="r">${money(x.mebleg)}</td></tr>`).join('')}</table></div>` : ''}`;
 };
@@ -1429,7 +1429,7 @@ function chequeHtml(c) {
   return `<div class="doc" id="cheque">
     <div style="display:flex;flex-direction:column;align-items:center;gap:8px">${logoFull(s.servis_adi, true)}<div class="muted">${esc([s.unvan, s.telefon].filter(Boolean).join(' · '))}</div></div>
     <b style="text-align:center">Ödəniş çeki №${esc(o.cek)}</b>
-    <div class="line muted"><span>${fmtDate(o.tarix.slice(0, 10))} ${esc(o.tarix.slice(11))}</span><span>${o.nov === 'bank' ? 'Bank köçürməsi' : 'Nağd'}</span></div>
+    <div class="line muted"><span>${fmtDate(o.tarix.slice(0, 10))} ${esc(o.tarix.slice(11))}</span><span>${o.nov === 'bank' ? 'Bank köçürməsi' : o.nov === 'silinme' ? 'Borc silindi' : 'Nağd'}</span></div>
     <div class="line"><span>Təchizatçı</span><b>${esc(c.supplier.ad)}</b></div>
     ${c.supplier.telefon ? `<div class="line"><span>Telefon</span><span>${esc(c.supplier.telefon)}</span></div>` : ''}
     <div class="line" style="font-size:18px"><b>Bu ödəniş</b><b>${money(o.mebleg)}</b></div>
