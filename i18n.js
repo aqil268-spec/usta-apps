@@ -7,6 +7,23 @@
 // =============================================================================
 const I18N_DICT = {
 
+  // --- V3.8
+  'Borca (nisyə) iş yazmaq': ['Write jobs on credit', 'Записывать работы в долг'], 'Çekdə usta haqqını dəyişmək və ya silmək': ['Change or remove the mechanic fee on a receipt', 'Менять или убирать оплату мастера в чеке'],
+  'Tövsiyə qiymətindən aşağı satmaq (minimuma qədər)': ['Sell below the recommended price (down to the minimum)', 'Продавать ниже рекомендованной цены (до минимума)'],
+  'Bütün qəbzlərə baxmaq': ['See all receipts', 'Видеть все чеки'], "Başqa ustanın müştəri borcunu qəbul etmək": ["Accept another mechanic's customer debt payment", 'Принимать оплату долга клиента другого мастера'],
+  'Maşın kartını düzəltmək': ['Edit car cards', 'Изменять карточки машин'], 'Müştəriyə kart linki göndərmək və təsdiqləmək': ['Send card links to customers and approve them', 'Отправлять клиентам ссылку на карточку и подтверждать'],
+  'Xərc və təhvil yazmaq': ['Record expenses and handovers', 'Записывать расходы и сдачу'], 'Ustaya pul ödəmək': ['Pay mechanics', 'Выплачивать мастерам'], 'Kassanı bağlamaq': ['Close the cash desk', 'Закрывать кассу'], 'Kassa tarixçəsi': ['Cash desk history', 'История кассы'],
+  'Mal və anbar': ['Goods and stock', 'Товары и склад'], 'Yeni mal, barkod, malın məlumatı': ['New items, barcodes, item details', 'Новые товары, штрихкоды, данные товара'],
+  'Malın qiyməti (tövsiyə, minimum, usta haqqı)': ['Item prices (recommended, minimum, fee)', 'Цены товара (рекоменд., минимум, оплата мастера)'], 'Alış (qaimə), alış sorğuları': ['Purchases (invoices), purchase requests', 'Закупки (накладные), запросы закупки'],
+  'Təchizatçıya sifariş, stoka qəbul': ['Supplier orders, receiving into stock', 'Заказы поставщику, приём на склад'], 'Təchizatçıya mal qaytarmaq': ['Return goods to suppliers', 'Возвращать товар поставщику'],
+  'Borc və ödəniş qrafikinə baxmaq': ['View debt and payment schedule', 'Видеть долг и график оплат'], 'Təchizatçıya pul ödəmək': ['Pay suppliers', 'Платить поставщикам'], 'Stok linki yaratmaq': ['Create stock links', 'Создавать ссылки склада'],
+  'Dövriyyə, ustalar, usta borcları': ['Turnover, mechanics, mechanic debts', 'Оборот, мастера, долги мастеров'], 'Mənfəət, maya, gəlir-xərc': ['Profit, cost, income/expenses', 'Прибыль, себестоимость, доходы/расходы'],
+  'Kassaya yazan və ya bağlayan kassanı avtomatik görür. Ödəmək, qaytarmaq və stok linki təchizatçı səhifəsini avtomatik açır.': ['Anyone who writes to or closes the cash desk can see it automatically. Paying, returning and stock links open the supplier page automatically.', 'Кто записывает в кассу или закрывает её, автоматически её видит. Оплата, возврат и ссылка склада автоматически открывают страницу поставщика.'],
+  'Yalnız qiymətləri dəyişə bilərsiniz.': ['You can change prices only.', 'Можно менять только цены.'], 'Yalnız malın məlumatını dəyişə bilərsiniz (qiymət yox).': ['You can change item details only (not prices).', 'Можно менять только данные товара (не цены).'],
+  'Malın standart haqqı.': ["The item's standard fee.", 'Стандартная оплата за товар.'], 'tövsiyə qiymətindən aşağı satmaq icazəniz yoxdur': ['you may not sell below the recommended price', 'нет права продавать ниже рекомендованной цены'],
+  'Qalıq, satış dəyəri': ['Stock, sales value', 'Остаток, стоимость продаж'], 'Dövriyyə, ustalar': ['Turnover, mechanics', 'Оборот, мастера'],
+  'Maşın kartını düzəltmək icazəniz yoxdur': ['You may not edit car cards', 'Нет права изменять карточки машин'], 'Yeni mal əlavə etmək icazəniz yoxdur': ['You may not add new items', 'Нет права добавлять товары'],
+  'Malın qiymətini dəyişmək icazəniz yoxdur': ['You may not change item prices', 'Нет права менять цены'], 'Malın məlumatını dəyişmək icazəniz yoxdur (yalnız qiymət)': ['You may not change item details (prices only)', 'Нет права менять данные товара (только цены)'],
   // --- V3.7
   'Telefon (qəbzdə)': ['Phone (on receipts)', 'Телефон (в чеке)'], 'Linklərdə görünən telefon': ['Phone shown on links', 'Телефон на страницах ссылок'], 'boş = görünmür': ['empty = hidden', 'пусто = не показывается'],
   'Müştəri və təchizatçı linklərində yalnız bu telefon görünür. Admin-in giriş nömrəsini yazmayın.': ['Only this phone is shown on customer and supplier links. Do not enter the admin login number.', 'На ссылках для клиентов и поставщиков виден только этот телефон. Не указывайте номер входа админа.'],
@@ -470,6 +487,9 @@ const I18N_DICT = {
 const I18N_PAT = [
 
   // --- V3.6
+  [/^Borca iş yazmaq icazəniz yoxdur: (.+) tam ödənməlidir$/, m => `You may not write jobs on credit: ${m[1]} must be paid in full`, m => `Нет права на работу в долг: ${m[1]} нужно оплатить полностью`],
+  [/^Usta haqqını dəyişmək icazəniz yoxdur \(standart: (.+)\)$/, m => `You may not change the mechanic fee (standard: ${m[1]})`, m => `Нет права менять оплату мастера (стандарт: ${m[1]})`],
+  [/^(.+): tövsiyə qiymətindən \((.+)\) aşağı satmaq icazəniz yoxdur$/, m => `${m[1]}: you may not sell below the recommended price (${m[2]})`, m => `${m[1]}: нет права продавать ниже рекомендованной цены (${m[2]})`],
   [/^Qiymət təsdiqi gözləyir: (\d+)$/, m => `Price approval waiting: ${m[1]}`, m => `Ожидает одобрения цены: ${m[1]}`],
   [/^(\d+ gün [\d.,]+%)(, \d+ gün [\d.,]+%)*$/, m => m[0].replace(/ gün /g, ' days '), m => m[0].replace(/ gün /g, ' дн. ')],
   [/^Çek №(\d+) · (Bank|Nağd|Borc silindi)$/, m => `Cheque #${m[1]} · ${{ Bank: 'Bank', 'Nağd': 'Cash', 'Borc silindi': 'Debt written off' }[m[2]]}`, m => `Чек №${m[1]} · ${{ Bank: 'Банк', 'Nağd': 'Наличные', 'Borc silindi': 'Долг списан' }[m[2]]}`],
