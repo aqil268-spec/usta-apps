@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#121417">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <title>AQQA Servis</title>
 <link rel="manifest" href="manifest.json">
@@ -181,7 +181,9 @@ select.lang{width:auto;min-height:30px;height:30px;padding:0 8px;font-size:12px;
   .side-foot .who{display:flex;flex-direction:column;gap:2px;min-width:0}
   .side-foot .who b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .side-foot .row{gap:8px}
-  .side-foot .btn{flex:1}
+  .side-foot .btn{flex:1;padding-left:8px;padding-right:8px;white-space:nowrap}
+  .side-foot .btn.bell{flex:0 0 44px;position:relative}
+  .side-foot .btn.bell .badge{position:absolute;top:2px;right:2px;margin:0}
   body.side .topbar .lang{display:none}
 
   /* Sütunlar və siyahılar */
