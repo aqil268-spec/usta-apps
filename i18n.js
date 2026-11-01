@@ -268,7 +268,7 @@ const I18N_DICT = {
   'Parametrlər': ['Settings', 'Настройки'], 'Servis, qəbz, interval, xatırlatma': ['Service, receipt, interval, reminder', 'Сервис, чек, интервал, напоминание'],
   'Qəbzin alt qeydi': ['Receipt footer', 'Подпись чека'], 'Xatırlatma mətni': ['Reminder text', 'Текст напоминания'], 'Standart az qalma həddi': ['Default low stock limit', 'Порог остатка по умолчанию'],
   'Server köhnə versiyadadır': ['The server is on an old version', 'Сервер на старой версии'],
-  'Apps Script-də yeni Code.gs-i yapışdırın, installTriggers funksiyasını bir dəfə işə salın və Deploy → Manage deployments → Edit → New version → Deploy edin.': ['Paste the new Code.gs in Apps Script, run installTriggers once, then Deploy → Manage deployments → Edit → New version → Deploy.', 'Вставьте новый Code.gs в Apps Script, один раз запустите installTriggers, затем Deploy → Manage deployments → Edit → New version → Deploy.'],
+  'Apps Script-də yeni Code.gs-i yapışdırın, setup və installTriggers funksiyalarını bir dəfə işə salın və Deploy → Manage deployments → Edit → New version → Deploy edin.': ['Paste the new Code.gs in Apps Script, run setup and installTriggers once, then Deploy → Manage deployments → Edit → New version → Deploy.', 'Вставьте новый Code.gs в Apps Script, один раз запустите setup и installTriggers, затем Deploy → Manage deployments → Edit → New version → Deploy.'],
 
   'Tövsiyə qiymət (₼)': ['Recommended price (₼)', 'Рекомендуемая цена (₼)'], 'Az qalma həddi (boşdursa 2)': ['Low stock limit (empty = 2)', 'Порог остатка (пусто = 2)'],
   'Axtar və ya yaz': ['Search or type', 'Найдите или введите'], 'Axtar və ya yeni ad yaz': ['Search or type a new name', 'Найдите или введите новое имя'],

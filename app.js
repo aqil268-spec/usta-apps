@@ -154,7 +154,7 @@ async function loadBoot(force) {
   if (force) { MEM[swrKey('bootstrap', {})] = b; persist(); }
   S.boot = b; S.user = b.user; S.settings = b.settings; S.products = b.products; S.dict = b.dict || {};
   if (b.cars) S.cars = b.cars; else syncCars(b.carsVer);
-  S.oldServer = !(b.v >= 3);
+  S.oldServer = !(b.v >= 3) || !(b.ver >= 36);   // V3.6: bildiriş, qaimə, təsdiq, icazələr
   return b;
 }
 
@@ -237,7 +237,7 @@ async function render() {
     if (html === null) return;
     const sideRoot = SIDE_ROOTS.includes(S.view) && !S.params.pick;
     const top = `<div class="topbar">${showBack() ? `<button class="icon-btn ${sideRoot ? 'mob-only' : ''}" data-act="back" aria-label="Geri">${ic('back', 20)}</button>` : '<span></span>'}${langSelect()}</div>`;
-    const warnOld = S.user && S.oldServer ? `<div class="banner bad"><b>Server köhnə versiyadadır</b><span>Apps Script-də yeni Code.gs-i yapışdırın, installTriggers funksiyasını bir dəfə işə salın və Deploy → Manage deployments → Edit → New version → Deploy edin.</span></div>` : '';
+    const warnOld = S.user && S.oldServer ? `<div class="banner bad"><b>Server köhnə versiyadadır</b><span>Apps Script-də yeni Code.gs-i yapışdırın, setup və installTriggers funksiyalarını bir dəfə işə salın və Deploy → Manage deployments → Edit → New version → Deploy edin.</span></div>` : '';
     const withNav = !!(S.user && !NO_RETURN.includes(S.view));
     document.body.classList.toggle('side', withNav);
     $app.innerHTML = `<main class="${NARROW.includes(S.view) ? 'narrow' : ''}">${top}${warnOld}${html}</main>${withNav ? nav() : ''}`;
@@ -1249,7 +1249,7 @@ function dueBanner(b) {
   return `<div class="banner ${d.gecikib > 0.009 ? 'bad' : 'warn'}"><b>Təchizatçıya ödəniş vaxtı</b><span>${[d.gecikib > 0.009 ? `<span>Gecikib:</span> ${money(d.gecikib)}` : '', d.bugun > 0.009 ? `<span>Bu gün:</span> ${money(d.bugun)}` : ''].filter(Boolean).join(' · ')}</span><button class="btn small" data-tab="suppliers">Bax</button></div>`;
 }
 VIEWS.suppliers = async () => {
-  const [list, due] = await Promise.all([cget('suppliers'), cget('dueList')]);
+  const [list, due] = await Promise.all([cget('suppliers'), cget('dueList').catch(() => ({ gecikib: 0, bugun: 0, sabah: 0, rows: [] }))]);
   const total = list.reduce((s, x) => s + Math.max(x.borc, 0), 0), t = today();
   return `<div class="between"><h1>Təchizatçılar</h1><div class="row" style="gap:8px">${can('alis') ? `<button class="btn small" data-act="newPurchase">${ic('plus', 18)}Alış</button>` : ''}<button class="btn small primary" data-act="newSupplier">${ic('plus', 18)}Yeni</button></div></div>
   <div class="cols"><div class="col">
