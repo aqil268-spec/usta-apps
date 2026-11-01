@@ -969,10 +969,10 @@ VIEWS.kassaHistory = async (p) => {
     <tr><th>Tarix</th><th class="r">Açılış</th><th class="r">Nağd +</th><th class="r">Çıxış</th><th class="r">Olmalı</th><th class="r">Faktiki</th><th class="r">Fərq</th></tr>
     ${days.map(d => `<tr><td>${fmtDate(d.tarix)}${d.baglanib ? '' : '<br><span class="pill bad">açıq</span>'}</td><td class="r">${money(d.acilis)}</td><td class="r">${money(d.axin.nagd_daxil)}</td>
       <td class="r">${money(d.axin.xerc + d.axin.usta_odenisi + d.axin.tehvil + d.axin.techizatci + (d.axin.ortaq || 0))}</td><td class="r">${money(d.hesablanan)}</td>
-      <td class="r">${d.baglanib ? `<button class="btn small" data-act="editDay" data-id="${esc(d.day_id)}" data-amt="${d.faktiki}">${money(d.faktiki)}</button>` : '—'}</td>
+      <td class="r">${d.baglanib ? (isAdmin() ? `<button class="btn small" data-act="editDay" data-id="${esc(d.day_id)}" data-amt="${d.faktiki}">${money(d.faktiki)}</button>` : money(d.faktiki)) : '—'}</td>
       <td class="r" style="color:${d.ferq < 0 ? 'var(--danger)' : 'inherit'}">${d.ferq === null ? '—' : money(d.ferq)}</td></tr>`).join('')}
   </table>` : '<div class="empty">Bu dövrdə hərəkət yoxdur.</div>'}</div>
-  <span class="muted">Faktiki məbləğə toxunaraq düzəliş edin. Sonrakı günlər yenidən hesablanır.</span>`;
+  ${isAdmin() ? '<span class="muted">Faktiki məbləğə toxunaraq düzəliş edin. Sonrakı günlər yenidən hesablanır.</span>' : ''}`;
 };
 
 // ------------------------------------------------------------- Admin: Hesabat, Gəlir, Stok
