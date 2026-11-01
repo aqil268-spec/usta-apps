@@ -7,6 +7,9 @@
 // =============================================================================
 const I18N_DICT = {
 
+  // --- V3.7
+  'Telefon (qəbzdə)': ['Phone (on receipts)', 'Телефон (в чеке)'], 'Linklərdə görünən telefon': ['Phone shown on links', 'Телефон на страницах ссылок'], 'boş = görünmür': ['empty = hidden', 'пусто = не показывается'],
+  'Müştəri və təchizatçı linklərində yalnız bu telefon görünür. Admin-in giriş nömrəsini yazmayın.': ['Only this phone is shown on customer and supplier links. Do not enter the admin login number.', 'На ссылках для клиентов и поставщиков виден только этот телефон. Не указывайте номер входа админа.'],
   // --- V3.6: bildiriş, alış hesabı, qiymət təsdiqi, icazələr
   'Bildirişlər': ['Notifications', 'Уведомления'], 'Telefona bildiriş': ['Phone notifications', 'Уведомления на телефон'], 'Nə vaxt gəlir': ['When they arrive', 'Когда приходят'],
   'Bildirişi aç': ['Turn on notifications', 'Включить уведомления'], 'Aç': ['Turn on', 'Включить'], 'Sonra': ['Later', 'Позже'], 'Yenidən qoş': ['Reconnect', 'Подключить заново'],

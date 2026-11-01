@@ -1,7 +1,10 @@
 'use strict';
 // ============================================================= Əsas
 const API = window.APP_CONFIG && window.APP_CONFIG.API_URL;
-const S = { token: localStorage.getItem('token') || '', user: null, settings: {}, products: [], dict: {}, cars: null, view: 'home', params: {}, history: [] };
+// Müştəri və təchizatçı linkləri ayrıca səhifədən açılır (l/): orada giriş ekranı və tətbiqin qalanı yoxdur
+const PUBLIC_ONLY = /\/l\/(index\.html)?$/.test(location.pathname);
+const PUB_BASE = () => location.origin + location.pathname.replace(/[^/]*$/, '') + (PUBLIC_ONLY ? '' : 'l/');
+const S = { token: PUBLIC_ONLY ? '' : (localStorage.getItem('token') || ''), user: null, settings: {}, products: [], dict: {}, cars: null, view: 'home', params: {}, history: [] };
 const $app = document.getElementById('app');
 
 const I = {
@@ -154,7 +157,7 @@ async function loadBoot(force) {
   if (force) { MEM[swrKey('bootstrap', {})] = b; persist(); }
   S.boot = b; S.user = b.user; S.settings = b.settings; S.products = b.products; S.dict = b.dict || {};
   if (b.cars) S.cars = b.cars; else syncCars(b.carsVer);
-  S.oldServer = !(b.v >= 3) || !(b.ver >= 36);   // V3.6: bildiriş, qaimə, təsdiq, icazələr
+  S.oldServer = !(b.v >= 3) || !(b.ver >= 37);   // V3.7: tanınan cihaz, link səhifəsi
   return b;
 }
 
@@ -184,7 +187,7 @@ function syncCars(ver) {
 }
 
 // ------------------------------------------------------------- Naviqasiya
-const NO_RETURN = ['login', 'changePin', 'pinShow', 'publicCar', 'publicStock', 'publicOrder'];
+const NO_RETURN = ['login', 'changePin', 'pinShow', 'publicCar', 'publicStock', 'publicOrder', 'publicNone'];
 const ROOTS = ['home', 'cars', 'kassa', 'me', 'products', 'more'];
 function go(view, params = {}, push = true) {
   if (push && !NO_RETURN.includes(S.view)) { S.history.push({ view: S.view, params: S.params }); if (S.history.length > 40) S.history.shift(); history.pushState({ app: 1 }, ''); }
@@ -230,6 +233,7 @@ async function render() {
   if (S.publicOrderToken) S.view = 'publicOrder';
   else if (S.publicStockToken) S.view = 'publicStock';
   else if (S.publicToken) S.view = 'publicCar';
+  else if (PUBLIC_ONLY) S.view = 'publicNone';
   else if (!S.token) S.view = 'login';
   const v = VIEWS[S.view] || VIEWS.home;
   try {
@@ -410,7 +414,7 @@ function filterCars(cars, q) {
 const carSub = c => c.son_km ? `Son: ${kmf(c.son_km)}${c.novbeti_km ? ' · növbəti ' + kmf(c.novbeti_km) : ''}` : 'Hələ iş yoxdur';
 // ------------------------------------------------------------- Müştəri üçün maşın kartı linki
 const linkBanner = () => { const n = (S.boot && S.boot.carLinks) || 0; return n ? `<button class="banner ok" data-act="go" data-v="carLinks" style="text-align:left;cursor:pointer"><b>${n} yeni maşın kartı gəlib</b><span>Müştəri linklə doldurub. Yoxlayın və təsdiq edin.</span></button>` : ''; };
-const linkUrl = token => location.origin + location.pathname + '#kart=' + token;
+const linkUrl = token => PUB_BASE() + '#kart=' + token;
 const linkText = url => `Salam! ${S.settings.servis_adi || 'Servis'} üçün maşınınızın kartını doldurun: ${url}\nLink 48 saat etibarlıdır və yalnız bir dəfə istifadə olunur.`;
 
 VIEWS.linkNew = (p) => {
@@ -457,6 +461,9 @@ VIEWS.carLinks = async () => {
     <button class="btn small" data-act="cancelLink" data-id="${esc(l.link_id)}">Ləğv et</button></div>`).join('') : '<div class="empty">Gözləyən link yoxdur.</div>'}</div>
   ${r.kecmis.length ? `<h2>Son baxılanlar</h2><div class="list">${r.kecmis.map(l => `<div class="item" style="cursor:default"><span class="plate">${esc(l.nomre)}</span><span class="grow"><span>${esc(l.musteri)}</span><span class="muted">${esc(l.istifade_saati)}</span></span>${linkStatus(l)}</div>`).join('')}</div>` : ''}`;
 };
+
+// Link səhifəsi açarsız açılanda: yalnız xəbər (giriş ekranı göstərilmir)
+VIEWS.publicNone = () => `<div class="card" style="margin-top:24px;gap:12px;text-align:center;align-items:center">${logoMark(48)}<h1>Link düzgün deyil.</h1><span class="muted">Servislə əlaqə saxlayın.</span></div>`;
 
 // Müştərinin gördüyü səhifə: şifrəsiz, yalnız bu forma
 VIEWS.publicCar = async (p) => {
@@ -1457,7 +1464,7 @@ VIEWS.partnerMoveForm = (p) => {
 };
 
 // ------------------------------------------------------------- Təchizatçıya mal sifarişi (link ilə)
-const orderUrl = token => location.origin + location.pathname + '#sifaris=' + token;
+const orderUrl = token => PUB_BASE() + '#sifaris=' + token;
 const orderText = (o, url) => `Salam! ${S.settings.servis_adi || 'Servis'}: mal sifarişi №${o.nomre}. Linkə baxın. Dəyişiklik yoxdursa, "Təsdiq et" basın. Fərqli say və ya qiymət varsa, yalnız həmin sətri yazın: ${url}`;
 const orderPill = st => ({ ok: '<span class="pill">Cavab gözlənilir</span>', tesdiq: '<span class="pill ok">Təsdiqlənib</span>', qebul: '<span class="pill ok">Stoka əlavə edilib</span>', legv: '<span class="pill muted-pill">Ləğv edilib</span>', bitib: '<span class="pill muted-pill">Vaxtı bitib</span>' }[st] || '');
 const qtyTxt = (q, v) => `<span>${grp(q, 2)} ${esc(v || '')}</span>`;
@@ -1592,7 +1599,7 @@ VIEWS.publicOrder = async (p) => {
 };
 
 // ------------------------------------------------------------- Təchizatçı üçün stok linki
-const stockUrl = token => location.origin + location.pathname + '#stok=' + token;
+const stockUrl = token => PUB_BASE() + '#stok=' + token;
 const msDT = ms => { if (!ms) return ''; const d = new Date(Number(ms)), z = x => String(x).padStart(2, '0'); return `${z(d.getDate())}.${z(d.getMonth() + 1)}.${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
 const slLimit = l => l.limit_nov === 'saat' ? `${l.limit_deyer} saat · ${msDT(l.bitme)}-dək` : l.limit_nov === 'defe' ? `${l.limit_deyer} dəfə · ${l.qalan} qalıb` : 'Limitsiz';
 const slPill = st => ({ ok: '<span class="pill ok">Aktiv</span>', legv: '<span class="pill muted-pill">Ləğv edilib</span>', bitib: '<span class="pill muted-pill">Vaxtı bitib</span>', limit: '<span class="pill muted-pill">Limit dolub</span>' }[st] || '');
@@ -1811,7 +1818,9 @@ VIEWS.settings = () => {
   <form class="card" data-form="settings">
     <label class="field">Servis adı<input name="servis_adi" value="${esc(s.servis_adi || '')}"></label>
     <label class="field">Ünvan<input name="unvan" value="${esc(s.unvan || '')}"></label>
-    <label class="field">Telefon<input name="telefon" value="${esc(s.telefon || '')}"></label>
+    <label class="field">Telefon (qəbzdə)<input name="telefon" value="${esc(s.telefon || '')}"></label>
+    <label class="field">Linklərdə görünən telefon<input name="ictimai_telefon" value="${esc(s.ictimai_telefon || '')}" placeholder="boş = görünmür"></label>
+    <span class="muted">Müştəri və təchizatçı linklərində yalnız bu telefon görünür. Admin-in giriş nömrəsini yazmayın.</span>
     <label class="field">Qəbzin alt qeydi<input name="alt_qeyd" value="${esc(s.alt_qeyd || '')}"></label>
     <div class="grid2">
       <label class="field">Yağ dəyişmə intervalı (km)<input name="interval_km" inputmode="numeric" value="${esc(s.interval_km || '10000')}"></label>
@@ -1840,7 +1849,9 @@ $app.addEventListener('submit', e => {
   run(async () => {
     switch (type) {
       case 'login': {
-        const r = await api('login', { phone: d.phone, pin: d.pin });
+        // Tanınan cihaz: açar telefonda qalır (çıxışda silinmir). Yad cihazdan səhv cəhdlər bu cihazı bloklamır.
+        const r = await api('login', { phone: d.phone, pin: d.pin, dev: localStorage.getItem('dev') || '' });
+        if (r.dev) localStorage.setItem('dev', r.dev);
         S.token = r.token; S.user = r.user; localStorage.setItem('token', r.token);
         if (r.mustChange) return go('changePin', {}, false);
         await loadBoot(true); setTimeout(warm, 1500); S.history = []; return go('home', {}, false);
@@ -2521,7 +2532,7 @@ setInterval(ping, 60000);
 document.addEventListener('visibilitychange', ping);
 
 (async function start() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator && !PUBLIC_ONLY) navigator.serviceWorker.register('sw.js').catch(() => {});
   // Müştəri üçün bir dəfəlik link: #kart=AÇAR (açar URL-in # hissəsindədir, serverə və loglara getmir)
   const pk = location.hash.match(/^#kart=([A-Za-z0-9_-]{40,60})$/);
   if (pk) { S.publicToken = pk[1]; S.view = 'publicCar'; S.params = {}; return render(); }
@@ -2534,6 +2545,7 @@ document.addEventListener('visibilitychange', ping);
   // Bildirişdən açılış: ?go=… (tətbiq bağlı idisə)
   const gq = new URLSearchParams(location.search).get('go');
   if (gq) { try { history.replaceState(null, '', location.pathname); } catch (e) { /* köhnə brauzer */ } }
+  if (PUBLIC_ONLY) { S.view = 'publicNone'; return render(); }
   if (!S.token) { S.view = 'login'; return render(); }
   try { await loadBoot(); S.view = 'home'; await render(); warm(); if (gq) openLink(gq); }
   catch (e) { render(); }
