@@ -2363,6 +2363,101 @@ async function saveJob() {
   go('receipt', { data: r, fresh: true }, false);
 }
 
+// ------------------------------------------------------------- Seçim siyahısı (A variantı)
+// Brauzerin <datalist>-i Android-də yalnız yazanda açılır və kiçikdir. Hər input[list] avtomatik bu siyahıya çevrilir:
+// toxunanda bütün seçimlər sahənin altında açılır, yazdıqca süzülür, sağda əlavə məlumat (məs. stok) görünür.
+// Seçiləndə sahəyə yazılır və 'input' + 'change' göndərilir: mövcud məntiq (malı əlavə et, modelləri yenilə) eyni qalır.
+// Siyahıda olmayan yeni dəyər yazmaq olar (yeni marka, yeni təchizatçı).
+const DD = { el: null, box: null, items: [], hi: -1, max: 120 };
+(() => {
+  const st = document.createElement('style');
+  st.textContent = `input[data-dl]{padding-right:44px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23A3A7AE' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.dd-box{position:absolute;z-index:60;background:var(--surface2);border:1px solid #3A3F48;border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.45);overflow-y:auto;padding:6px;box-sizing:border-box;overscroll-behavior:contain}
+.dd-opt{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:8px 12px;border:none;border-radius:10px;background:transparent;color:var(--text);font:inherit;font-size:15px;text-align:left;cursor:pointer}
+.dd-opt .dd-v{flex:1;min-width:0;overflow-wrap:anywhere}.dd-opt .dd-l{font-size:13px;color:var(--muted);white-space:nowrap}
+.dd-opt.hi,.dd-opt:hover{background:var(--accent-soft)}.dd-opt.on .dd-v{color:var(--accent)}
+.dd-more{padding:8px 12px;font-size:12px;color:var(--muted)}`;
+  document.head.appendChild(st);
+})();
+const ddNorm = v => String(v || '').toLocaleLowerCase('az').trim();
+// Yeni çəkilən ekranda input[list] → input[data-dl] (brauzerin öz siyahısı açılmasın)
+function ddScan(root) { (root || document).querySelectorAll('input[list]').forEach(i => { i.dataset.dl = i.getAttribute('list'); i.removeAttribute('list'); i.setAttribute('role', 'combobox'); i.setAttribute('aria-autocomplete', 'list'); i.setAttribute('aria-expanded', 'false'); }); }
+new MutationObserver(ms => { if (ms.some(m => m.addedNodes.length)) { ddScan(); if (DD.el && !document.contains(DD.el)) ddClose(); } }).observe(document.body, { childList: true, subtree: true });
+ddScan();
+function ddOptions(el) {
+  const dl = document.getElementById(el.dataset.dl);
+  return dl ? [...dl.options].map(o => ({ v: o.value, l: (o.textContent || '').trim() === o.value ? '' : (o.textContent || '').trim() })).filter(o => o.v) : [];
+}
+function ddOpen(el, all) {
+  const q = ddNorm(el.value), opts = ddOptions(el);
+  // Sahədə artıq seçilmiş dəyər varsa (və ya oxa toxunulubsa) bütün siyahı görünür
+  const exact = opts.some(o => ddNorm(o.v) === q);
+  const list = all || !q || exact ? opts : opts.filter(o => ddNorm(o.v + ' ' + o.l).includes(q));
+  if (!list.length) return ddClose();
+  DD.el = el; DD.items = list; DD.hi = -1;
+  let box = DD.box;
+  if (!box) {
+    box = DD.box = document.createElement('div'); box.className = 'dd-box'; box.setAttribute('role', 'listbox'); box.id = 'dd-box';
+    // Toxunuş fokus götürməsin: klaviatura bağlanmasın, sahə blur olmasın
+    box.addEventListener('pointerdown', e => e.preventDefault());
+    box.addEventListener('mousedown', e => e.preventDefault());
+    box.addEventListener('click', e => { const b = e.target.closest('.dd-opt'); if (b) ddPick(+b.dataset.i); });
+    document.body.appendChild(box);
+  }
+  const cur = ddNorm(el.value);
+  box.innerHTML = list.slice(0, DD.max).map((o, i) => `<button type="button" role="option" class="dd-opt${ddNorm(o.v) === cur ? ' on' : ''}" data-i="${i}" data-noi18n><span class="dd-v">${esc(o.v)}</span>${o.l ? `<span class="dd-l">${esc(o.l)}</span>` : ''}</button>`).join('')
+    + (list.length > DD.max ? `<div class="dd-more">+${list.length - DD.max} — ${esc(tr('Axtar'))}…</div>` : '');
+  el.setAttribute('aria-expanded', 'true'); el.setAttribute('aria-controls', 'dd-box');
+  ddPlace();
+}
+function ddPlace() {
+  const el = DD.el, box = DD.box; if (!el || !box) return;
+  const r = el.getBoundingClientRect(), vv = window.visualViewport, vh = vv ? vv.height + vv.offsetTop : innerHeight;
+  const below = vh - r.bottom - 8, above = r.top - 8, up = below < 180 && above > below;
+  const h = Math.max(120, Math.min(340, up ? above : below));
+  box.style.left = (r.left + scrollX) + 'px'; box.style.width = r.width + 'px'; box.style.maxHeight = h + 'px';
+  box.style.top = up ? (r.top + scrollY - Math.min(h, box.scrollHeight) - 6) + 'px' : (r.bottom + scrollY + 6) + 'px';
+  box.style.display = 'block';
+}
+function ddClose() {
+  if (DD.el) DD.el.setAttribute('aria-expanded', 'false');
+  if (DD.box) { DD.box.style.display = 'none'; DD.box.innerHTML = ''; }
+  DD.el = null; DD.items = []; DD.hi = -1;
+}
+function ddPick(i) {
+  const el = DD.el, o = DD.items[i]; if (!el || !o) return;
+  ddClose();
+  el.value = o.v;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+document.addEventListener('focusin', e => { const el = e.target; if (el.matches && el.matches('input[data-dl]')) ddOpen(el); else if (DD.el && !(DD.box && DD.box.contains(el))) ddClose(); });
+document.addEventListener('focusout', e => { if (e.target === DD.el) setTimeout(() => { if (DD.el && document.activeElement !== DD.el) ddClose(); }, 0); });
+document.addEventListener('click', e => {
+  const el = e.target;
+  if (el.matches && el.matches('input[data-dl]')) {
+    // Fokusda olan sahəyə yenidən toxunuş: siyahı açılır/bağlanır. Oxa (sağ 44px) toxunuş: bütün siyahı
+    const r = el.getBoundingClientRect(), arrow = e.clientX > r.right - 44;
+    if (DD.el === el && !arrow) return;
+    if (DD.el === el && arrow) return ddClose();
+    return ddOpen(el, arrow);
+  }
+  if (DD.el && !(DD.box && DD.box.contains(el))) ddClose();
+});
+document.addEventListener('input', e => { if (e.target.matches && e.target.matches('input[data-dl]') && document.activeElement === e.target) ddOpen(e.target); }, true);
+document.addEventListener('keydown', e => {
+  if (!DD.el || e.target !== DD.el) return;
+  const n = Math.min(DD.items.length, DD.max);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault(); DD.hi = (DD.hi + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
+    DD.box.querySelectorAll('.dd-opt').forEach((b, i) => b.classList.toggle('hi', i === DD.hi));
+    const b = DD.box.querySelector('.dd-opt.hi'); if (b) b.scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter' && DD.hi >= 0) { e.preventDefault(); ddPick(DD.hi); }
+  else if (e.key === 'Escape') ddClose();
+});
+addEventListener('resize', ddPlace); addEventListener('scroll', ddPlace, true);
+if (window.visualViewport) visualViewport.addEventListener('resize', ddPlace);
+
 // ------------------------------------------------------------- Barkod: skaner və kamera
 // Skaner (USB və ya Bluetooth) klaviatura kimi işləyir: rəqəmləri çox sürətlə yazır və sonda Enter basır.
 // İnsan bu sürətlə yaza bilmir. Ona görə sürətli yazı + Enter = barkod. Hansı sahə aktiv olsa da, barkod həmin sahəyə düşmür.
