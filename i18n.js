@@ -300,7 +300,7 @@ const I18N_DICT = {
   'Məbləğ (₼)': ['Amount (₼)', 'Сумма (₼)'], 'Faktiki nağd (₼)': ['Actual cash (₼)', 'Фактические наличные (₼)'],
   'Yağ dəyişmə intervalı (km)': ['Oil change interval (km)', 'Интервал замены масла (км)'], 'İnterval (ay)': ['Interval (months)', 'Интервал (мес.)'],
   'Mətndə istifadə edin: {musteri}, {masin}, {nomre}, {servis}, {telefon}': ['Use in the text: {musteri}, {masin}, {nomre}, {servis}, {telefon}', 'Используйте в тексте: {musteri}, {masin}, {nomre}, {servis}, {telefon}'],
-  'Yüklənir': ['Loading', 'Загрузка'],
+  'Yüklənir': ['Loading', 'Загрузка'], 'Server açılır, 1 dəqiqəyə qədər gözləyin': ['Server is starting, please wait up to 1 minute', 'Сервер запускается, подождите до 1 минуты'],
   'Axtarış və tarixçə': ['Search and history', 'Поиск и история'], 'Bu ödəniş': ['This payment', 'Этот платёж'], 'Cəmi ödənilib': ['Total paid', 'Всего оплачено'],
   'Usta haqqı + təmir': ['Fee + repairs', 'Оплата + ремонт'], 'yağ yoxdur': ['no oil', 'нет масла'], 'Usta haqqı:': ['Mechanic fee:', 'Оплата мастера:'],
 

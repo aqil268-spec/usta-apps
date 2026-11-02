@@ -1,6 +1,8 @@
 'use strict';
 // ============================================================= Əsas
-const API = window.APP_CONFIG && window.APP_CONFIG.API_URL;
+// Server ünvanı: config.js. Server "keçdi" desə (moved), tətbiq yeni ünvana özü keçir və onu yadda saxlayır.
+const API_OK = u => /^https:\/\/[a-z0-9-]+\.onrender\.com\/api$/.test(u) || /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u) || (location.hostname === 'localhost' && /^http:\/\/localhost:\d+\/api$/.test(u));
+let API = (() => { try { const m = localStorage.getItem('apiMoved'); if (m && API_OK(m)) return m; } catch (e) {} return window.APP_CONFIG && window.APP_CONFIG.API_URL; })();
 // Müştəri və təchizatçı linkləri ayrıca səhifədən açılır (l/): orada giriş ekranı və tətbiqin qalanı yoxdur
 const PUBLIC_ONLY = /\/l\/(index\.html)?$/.test(location.pathname);
 const PUB_BASE = () => location.origin + location.pathname.replace(/[^/]*$/, '') + (PUBLIC_ONLY ? '' : 'l/');
@@ -122,6 +124,7 @@ async function api(action, body = {}, quiet) {
         continue;
       }
       if (!j.ok) {
+        if (j.moved && API_OK(j.moved) && j.moved !== API && attempt < 2) { API = j.moved; try { localStorage.setItem('apiMoved', j.moved); } catch (e) {} continue; }
         if (j.busy && attempt < 2) { lastErr = new Error(j.error); await sleep(2500); continue; }
         if (j.auth) { logout(false, j.error); const e = new Error(j.error || 'Xəta'); e.auth = true; throw e; }
         else if (j.mustChange && S.view !== 'changePin') { S.history = []; go('changePin', {}, false); }
@@ -140,10 +143,12 @@ function loading(on) {
     // Yüklənmə: kapsulda üç damla növbə ilə hoppanır
     const d = '<svg viewBox="0 0 10 13" aria-hidden="true"><path d="M5 0s5 5.5 5 8.2a5 5 0 0 1-10 0C0 5.5 5 0 5 0z"/></svg>';
     el = document.createElement('div'); el.className = 'loading';
-    el.innerHTML = `<div class="ld-pill" role="status"><span class="ld-drops">${d}${d}${d}</span><span>${esc(tr('Yüklənir'))}</span></div>`;
+    el.innerHTML = `<div class="ld-pill" role="status"><span class="ld-drops">${d}${d}${d}</span><span data-ldtxt>${esc(tr('Yüklənir'))}</span></div>`;
     document.body.appendChild(el);
+    // Pulsuz server boş qalanda yatır: ilk sorğu 1 dəqiqəyə qədər çəkə bilər — istifadəçi bunu bilsin
+    el._slow = setTimeout(() => { const t = el.querySelector('[data-ldtxt]'); if (t) t.textContent = tr('Server açılır, 1 dəqiqəyə qədər gözləyin'); }, 7000);
   }
-  if (!on && el) el.remove();
+  if (!on && el) { clearTimeout(el._slow); el.remove(); }
 }
 function toast(msg, ok) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
