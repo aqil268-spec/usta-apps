@@ -936,7 +936,8 @@ VIEWS.kassa = async () => {
       <div class="stat"><span>Xərclər</span><b>${money(f.xerc)}</b></div>
       <div class="stat"><span>Ustalara ödənib</span><b>${money(f.usta_odenisi)}</b></div>
       <div class="stat"><span>Təchizatçılara</span><b>${money(f.techizatci)}</b></div>
-      ${f.ortaq || f.ortaq_qoy ? `<div class="stat"><span>Ortaqlar (−/+)</span><b>${money(f.ortaq)} / ${money(f.ortaq_qoy)}</b></div>` : ''}
+      ${f.ortaq_qoy ? `<div class="stat"><span>Ortaq qoydu</span><b>+${money(f.ortaq_qoy)}</b></div>` : ''}
+      ${f.ortaq ? `<div class="stat"><span>Ortağa verildi</span><b>${money(f.ortaq)}</b></div>` : ''}
       <div class="stat"><span>Təhvil</span><b>${money(f.tehvil)}</b></div>
     </div>
   </div>
@@ -969,6 +970,9 @@ VIEWS.kassa = async () => {
   </form>` : ''}`}</div>` : ''}</div>`;
 };
 
+// Kassa tarixçəsi: Açılış + Daxil − Çıxış = Olmalı (ortağın kassaya qoyduğu pul da daxildir)
+const kIn = a => a.nagd_daxil + (a.ortaq_qoy || 0) + Math.max(a.duzelis || 0, 0);
+const kOut = a => a.xerc + a.usta_odenisi + a.tehvil + a.techizatci + (a.ortaq || 0) + Math.max(-(a.duzelis || 0), 0);
 VIEWS.kassaHistory = async (p) => {
   const { key, range } = pickRange(p, 'ay');
   const days = await cget('kassaHistory', { from: range[0], to: range[1] });
@@ -977,8 +981,8 @@ VIEWS.kassaHistory = async (p) => {
   ${presetSeg(key, 'kassaHistory')}
   <div class="card scroll">${days.length ? `<table>
     <tr><th>Tarix</th><th class="r">Açılış</th><th class="r">Nağd +</th><th class="r">Çıxış</th><th class="r">Olmalı</th><th class="r">Faktiki</th><th class="r">Fərq</th></tr>
-    ${days.map(d => `<tr><td>${fmtDate(d.tarix)}${d.baglanib ? '' : '<br><span class="pill bad">açıq</span>'}</td><td class="r">${money(d.acilis)}</td><td class="r">${money(d.axin.nagd_daxil)}</td>
-      <td class="r">${money(d.axin.xerc + d.axin.usta_odenisi + d.axin.tehvil + d.axin.techizatci + (d.axin.ortaq || 0))}</td><td class="r">${money(d.hesablanan)}</td>
+    ${days.map(d => `<tr><td>${fmtDate(d.tarix)}${d.baglanib ? '' : '<br><span class="pill bad">açıq</span>'}</td><td class="r">${money(d.acilis)}</td><td class="r">${money(kIn(d.axin))}</td>
+      <td class="r">${money(kOut(d.axin))}</td><td class="r">${money(d.hesablanan)}</td>
       <td class="r">${d.baglanib ? (isAdmin() ? `<button class="btn small" data-act="editDay" data-id="${esc(d.day_id)}" data-amt="${d.faktiki}">${money(d.faktiki)}</button>` : money(d.faktiki)) : '—'}</td>
       <td class="r" style="color:${d.ferq < 0 ? 'var(--danger)' : 'inherit'}">${d.ferq === null ? '—' : money(d.ferq)}</td></tr>`).join('')}
   </table>` : '<div class="empty">Bu dövrdə hərəkət yoxdur.</div>'}</div>
