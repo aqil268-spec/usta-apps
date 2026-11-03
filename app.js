@@ -145,7 +145,7 @@ function loading(on) {
     el = document.createElement('div'); el.className = 'loading';
     el.innerHTML = `<div class="ld-pill" role="status"><span class="ld-drops">${d}${d}${d}</span><span data-ldtxt>${esc(tr('Yüklənir'))}</span></div>`;
     document.body.appendChild(el);
-    // Pulsuz server boş qalanda yatır: ilk sorğu 1 dəqiqəyə qədər çəkə bilər — istifadəçi bunu bilsin
+    // Server uzun fasilədən sonra açılanda ilk sorğu gecikə bilər — istifadəçi bunu bilsin
     el._slow = setTimeout(() => { const t = el.querySelector('[data-ldtxt]'); if (t) t.textContent = tr('Server açılır, 1 dəqiqəyə qədər gözləyin'); }, 7000);
   }
   if (!on && el) { clearTimeout(el._slow); el.remove(); }

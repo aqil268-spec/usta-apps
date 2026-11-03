@@ -3,8 +3,8 @@
 Yağ dəyişmə və təmir servisi üçün mobil tətbiq (PWA). Usta işləri yazır, admin hesabatı, kassanı, stoku və təchizatçıları idarə edir.
 
 - **Tətbiq (ekran):** bu repo, GitHub Pages ilə açılır.
-- **Server:** Google Apps Script (`Code.gs`). Server kodu bu repoda **saxlanmır**, yalnız Apps Script redaktorundadır.
-- **Məlumat bazası:** Google Sheets.
+- **Server və məlumat bazası:** ayrıca, gizli yerdə saxlanılır. Bu repoda server kodu, açar və ya şifrə yoxdur.
+- Ekran serverlə yalnız `config.js`-dəki ünvan (`API_URL`) üzərindən danışır. Təhlükəsizlik bu ünvanın gizli olmasına yox, girişə və icazələrə əsaslanır.
 
 ## Qovluqlar
 
@@ -26,24 +26,12 @@ Yağ dəyişmə və təmir servisi üçün mobil tətbiq (PWA). Usta işləri ya
 1. Dəyişən faylları **bir commit-də** yükləyin. Faylları bir-bir yükləsəniz, GitHub Pages build-ləri bir-birini dayandırır ("cancelled").
 2. `sw.js`-də `CACHE` versiyasını artırın (məs. `aqqa-v18` → `aqqa-v19`). Belə olanda telefonlar yeni versiyanı dərhal alır.
 
-### Server (Apps Script)
-1. Yeni `Code.gs`-in məzmununu Apps Script redaktoruna yapışdırın və Save edin.
-2. **Deploy → Manage deployments → Edit → New version → Deploy.**
-3. Linki dəyişməyin. Link dəyişsə, `config.js`-də `API_URL`-i yeniləyin.
+### Server
+Server kodu bu repoda deyil. Server yenilənəndə ekranda heç nə dəyişmək lazım deyil (ünvan dəyişməsə).
 
-## Apps Script funksiyaları (əl ilə işə salınır)
+## Malların nümunə faylı
 
-| Funksiya | Nə vaxt |
-|---|---|
-| `setup` | İlk dəfə. Cədvəlləri və admini yaradır |
-| `installTriggers` | İlk dəfə. Gecə backup, sessiya təmizliyi, keş |
-| `sifirla` | Test bitəndə. İstifadəçilərdən başqa hər şeyi silir (əvvəl backup çıxarır) |
-| `backup` | İstənilən vaxt. "AQQA Backup" qovluğuna surət |
-| `clearCache` | Cədvəli əl ilə dəyişəndən sonra |
-
-## Malları cədvələ əl ilə yazmaq
-
-`Products` vərəqinə yazın. Nümunə: `templates/products.csv`.
+Nümunə: `templates/products.csv`.
 
 - Məcburi: `product_id` (təkrarlanmayan), `marka`, `vahid` (`qab` və ya `litr`), `aktiv` (`1`).
 - `nov`: `yag`, `filtr` və ya `diger`.
@@ -53,5 +41,5 @@ Yağ dəyişmə və təmir servisi üçün mobil tətbiq (PWA). Usta işləri ya
 
 ## Təhlükəsizlik
 
-- Şifrələr cədvəldə HMAC-SHA256 hash kimi saxlanır. Açar (`SALT`) Script Properties-dədir, bu repoda yoxdur.
-- Repoya heç vaxt `Code.gs`, şifrə, `SALT` və ya cədvəlin ID-sini yazmayın.
+- Şifrələr açıq mətn kimi saxlanmır (HMAC-SHA256 hash). Hash açarı yalnız serverdədir.
+- Bu repo açıqdır: buraya heç vaxt server kodu, şifrə, açar, baza ünvanı və ya şəxsi məlumat yazmayın.
