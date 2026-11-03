@@ -1,4 +1,4 @@
-// Apps Script "Web app" deploy linki (/exec ilə bitir)
+// Server ünvanı (Render). Apps Script köhnə ünvanı yalnız yönləndirmə və gecə backup-ı üçün qalır.
 window.APP_CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbxdXC_XkjFh09LUq2D-yoCks8_Hf6Axjqst8jGj8YjcDl7umbJuxtWhzd-xJ5JmPCXQFA/exec'
+  API_URL: 'https://aqqa-sinaq.onrender.com/api'
 };
